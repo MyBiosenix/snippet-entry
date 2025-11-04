@@ -1,0 +1,46 @@
+.mydassh{
+    padding: 10px 20px;
+}
+.mydassh h3{
+    font-size: 30px;
+    margin: 0;
+}
+.boxes{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+.box{
+    width: 100%;
+    box-shadow: 2px 2px 10px gray;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    border-radius: 5px;
+    background: #1e293b;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+.icn{
+    margin: 0;
+    font-size: 50px;
+}
+.inbox h4,h5{
+    margin: 0;
+    text-align: center;
+}
+.inbox h4{
+    font-size: 28px;
+}
+.inbox h5{
+    font-size: 25px;
+}

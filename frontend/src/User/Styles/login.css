@@ -1,0 +1,125 @@
+.mylogin{
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: url(../../assets/back2.jpg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: black;
+}
+.login{
+    display: flex;
+    flex-direction: column;
+    background: rgba(138, 136, 136, 0.877);
+    padding: 70px 40px ;
+    border-radius: 8px;
+    gap: 20px;
+}
+.login h2{
+    text-align: center;
+    text-decoration: underline;
+}
+.myinputs{
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.input{
+    display: flex;
+    flex-direction: column;
+}
+.input input{
+    font-size: 17px;
+    padding: 5px 10px;
+    width: 300px;
+    height: 30px;
+    background-color: white;
+    color: black;
+    border-width: 0;
+    border-radius: 4px;
+}
+.input input::placeholder{
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+label{
+    font-size: 20px;
+}
+.login button{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 45px;
+    font-size: 18px;       
+    font-weight: 600;     
+    color: white;          
+    background: linear-gradient(135deg, #6a11cb, #2575fc); 
+    border: none;
+    border-radius: 25px;  
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+    transition: all 0.3s ease; 
+}
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 35px; /* space for the eye icon */
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top:25%;
+  cursor: pointer;
+  color: #555;
+  font-size: 18px;
+}
+
+.toggle-password:hover {
+  color: #000;
+}
+
+@media (max-width:450px){
+    .mylogin{
+        
+        align-items: center;
+        justify-content: center;
+
+    }
+    .login{
+        width: 80%;
+        align-items: center;
+        padding: 20px 20px;
+    }
+    .myinputs{
+        width: 100%;
+        padding: 10px 20px;
+    }
+    
+    .input label{
+        font-size: 16px;
+    }
+
+    .input input {
+        width: 100%;
+        font-size: 16px;
+        height: 32px;
+        box-sizing: border-box;
+    }
+
+    .password-input-wrapper {
+        width: 100%;
+    }
+    .logn{
+        width: 100%;
+        border-radius: 3px;
+        
+    }
+}
