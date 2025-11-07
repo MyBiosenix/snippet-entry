@@ -11,7 +11,7 @@ function ViewComp() {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`http://localhost:5098/api/snippet/user/${userId}`)
+    fetch(`https://dms-2g0q.onrender.com/api/snippet/user/${userId}`)
       .then(res => res.json())
       .then(data => {
         console.log("Fetched snippets:", data);
@@ -22,7 +22,7 @@ function ViewComp() {
 
   return (
     <div className="report-page">
-      <p className='back' onClick={()=>navigate('/')}>Back</p>
+      <p className='back' onClick={()=>navigate('/home')}>Back</p>
       <h2 className="report-title">All Submitted Pages</h2>
 
       {results.length > 0 ? (

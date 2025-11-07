@@ -1,6 +1,6 @@
 import React from 'react'
 import Header from '../Components/Header';
-import ProfileComp from '../Components/profileComp';
+import ProfileComp from '../Components/ProfileComp';
 import '../Styles/profile.css' 
 
 function Profile() {

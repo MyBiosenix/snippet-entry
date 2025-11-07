@@ -11,7 +11,7 @@ function Dashboard() {
 
     const getStats = async() => {
         try{
-            const res = await axios.get('http://localhost:5098/api/admin/dash-stats');
+            const res = await axios.get('https://dms-2g0q.onrender.com/api/admin/dash-stats');
             setAdmins(res.data.totalAdmins);
             setUsers(res.data.totalUsers);
             setActiveUsers(res.data.activeUsers);

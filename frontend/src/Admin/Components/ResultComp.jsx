@@ -20,7 +20,7 @@ function ResultComp() {
 
   useEffect(() => {
     if (!userId) return;
-    fetch(`http://localhost:5098/api/snippet/results/${userId}`)
+    fetch(`https://dms-2g0q.onrender.com/api/snippet/results/${userId}`)
       .then(res => res.json())
       .then(data => setResults(data))
       .catch(err => console.error(err));
@@ -28,7 +28,7 @@ function ResultComp() {
 
   const handleToggleVisibility = async (errorId) => {
     try {
-      const res = await fetch(`http://localhost:5098/api/snippet/toggle/${userId}/${errorId}`, {
+      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/toggle/${userId}/${errorId}`, {
         method: "PATCH",
       });
       const data = await res.json();
@@ -50,7 +50,6 @@ function ResultComp() {
     }
   };
 
-  // --- New: Edit handlers ---
   const handleSnippetClick = (r) => {
     if (selected?._id === r._id) {
       setSelected(null);
@@ -62,7 +61,7 @@ function ResultComp() {
   };
 
   const handleEditClick = (r) => {
-    console.log("✅ Edit mode triggered for:", r); // <--- add this
+    console.log("Edit mode triggered for:", r); 
     setSelected(r);
     setEditMode(true);
     setEditValues({
@@ -86,7 +85,7 @@ function ResultComp() {
     const s = Number(vals.spelling || 0);
 
     const total = (cs * 0.9) + (p * 0.7) + (mw * 1) + (s * 1);
-    // total is in percent units (e.g., 2 * 0.9 => 1.8%)
+  
     return total;
   };
 
@@ -100,7 +99,6 @@ function ResultComp() {
 
   const handleCancelEdit = () => {
     setEditMode(false);
-    // optionally reload selected from results to reset values
     if (selected) {
       const fresh = results.find(r => r._id === selected._id);
       if (fresh) setSelected(fresh);
@@ -116,12 +114,11 @@ function ResultComp() {
       punctuation: editValues.punctuation,
       missingExtraWord: editValues.missingExtraWord,
       spelling: editValues.spelling,
-      // server will recalc again for safety, but send client-calc for convenience
       totalErrorPercentage: editValues.totalErrorPercentage,
     };
 
     try {
-      const res = await fetch(`http://localhost:5098/api/snippet/update/${userId}/${errorId}`, {
+      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/update/${userId}/${errorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -132,7 +129,6 @@ function ResultComp() {
         return;
       }
 
-      // Update results list locally
       setResults(prev =>
         prev.map(r =>
           r._id === errorId ? { ...r, ...r.snippetId && { snippetId: r.snippetId }, ...r.userText && { userText: r.userText }, ...data.updated } : r
@@ -142,8 +138,8 @@ function ResultComp() {
       setSelected(prev => ({
         ...prev,
         ...data.updated,
-        snippetId: prev.snippetId, // preserve original snippet data
-        userText: prev.userText,   // preserve user text
+        snippetId: prev.snippetId, 
+        userText: prev.userText,   
       }));
 
       setEditMode(false);
@@ -153,7 +149,6 @@ function ResultComp() {
     }
   };
 
-  // --- existing highlightErrors unchanged ---
   function highlightErrors(original, userText) {
     if (!original || !userText) {
       return <span className="no-text">No text available to compare.</span>;

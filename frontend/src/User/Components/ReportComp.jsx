@@ -19,7 +19,7 @@ function ReportComp() {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`http://localhost:5098/api/snippet/user-visible/${userId}`)
+    fetch(`https://dms-2g0q.onrender.com/api/snippet/user-visible/${userId}`)
       .then(res => res.json())
       .then(data => setResults(data))
       .catch(err => console.error(err));
@@ -214,7 +214,7 @@ function ReportComp() {
 
   return (
     <div className="report-page">
-      <p className='back' onClick={()=>navigate('/')}>Back</p>
+      <p className='back' onClick={()=>navigate('/home')}>Back</p>
       <h2 className="report-title">Data Conversion Reports</h2>
 
       {results.length > 0 && (

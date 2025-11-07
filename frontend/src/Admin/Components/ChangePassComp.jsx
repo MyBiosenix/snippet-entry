@@ -28,7 +28,7 @@ function ChangePassComp() {
 
     if(valid){
       try{
-        const res = await axios.put(`http://localhost:5098/api/admin/${id}/change-password`,{
+        const res = await axios.put(`https://dms-2g0q.onrender.com/api/admin/${id}/change-password`,{
             password, newPassword:newPass
         })
         alert(res.data.message);

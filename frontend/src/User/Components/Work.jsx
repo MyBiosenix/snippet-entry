@@ -13,7 +13,7 @@ function Work() {
 
   const fetchNextSnippet = async () => {
     try {
-      const res = await fetch(`http://localhost:5098/api/snippet/next/${userId}`, {
+      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/next/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -41,7 +41,6 @@ function Work() {
   useEffect(() => {
     fetchNextSnippet();
 
-    // Disable right click + keyboard shortcuts for copy/paste
     const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
       if (
@@ -69,7 +68,7 @@ function Work() {
     if (!confirmSubmit) return;
 
     try {
-      await fetch("http://localhost:5098/api/snippet/submit", {
+      await fetch("https://dms-2g0q.onrender.com/api/snippet/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,6 +117,7 @@ function Work() {
                 onPaste={(e) => e.preventDefault()}
                 onCopy={(e) => e.preventDefault()}
                 onCut={(e) => e.preventDefault()}
+                onContextMenu={(e) => e.preventDefault()}
               ></textarea>
 
               <button onClick={handleSubmit} disabled={isCompleted}>

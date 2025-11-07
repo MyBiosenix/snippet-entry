@@ -11,10 +11,9 @@ function ActiveComp() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // ✅ Fetch all active users
   const getActiveUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/auth/active-users');
+      const res = await axios.get('https://dms-2g0q.onrender.com/api/auth/active-users');
       setUsers(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Error Fetching Active Users');
@@ -25,14 +24,12 @@ function ActiveComp() {
     getActiveUsers();
   }, []);
 
-  // ✅ Filtered users for search
   const filteredActiveUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ✅ Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredActiveUsers.slice(indexOfFirstItem, indexOfLastItem);
@@ -44,7 +41,6 @@ function ActiveComp() {
     }
   };
 
-  // ✅ Export to Excel
   const exportToExcel = () => {
     const data = filteredActiveUsers.map((u, i) => ({
       "Sr No.": i + 1,
@@ -59,7 +55,6 @@ function ActiveComp() {
     XLSX.writeFile(workbook, "ActiveUsersList.xlsx");
   };
 
-  // ✅ Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("Active Users List", 14, 15);
@@ -137,7 +132,6 @@ function ActiveComp() {
           </tbody>
         </table>
 
-        {/* ✅ Pagination UI */}
         {filteredActiveUsers.length > 0 && (
           <div className="pagination-container">
             <div className="pagination">

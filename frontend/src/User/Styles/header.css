@@ -166,8 +166,12 @@ body{
     left: 0;
   }
 
-  .myp, .lop {
+  .myp {
     font-size: 16px;
+  }
+  .lop{
+    font-size: 16px;
+    margin-bottom: 40px;
   }
 
   .dropdown {

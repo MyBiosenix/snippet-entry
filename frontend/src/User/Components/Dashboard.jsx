@@ -35,7 +35,7 @@ function Dashboard() {
   }, []);
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!stats) return <p>Loading dashboard...</p>;
+  if (!stats) return <p className='load'>Loading dashboard...</p>;
 
   return (
     <div className='dashboard'>

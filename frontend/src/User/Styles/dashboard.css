@@ -54,54 +54,38 @@
 }
 
 @media (max-width: 450px) {
-  .dashboard {
-    padding: 15px;
-    width: 85%;
-    
+  .dashboard{
+    width: 100%;
+    display: flex;
+    padding: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
-
-  .dashboard h3 {
-    font-size: 22px;
-    text-align: center;
-    margin-bottom: 25px;
+  .dashboard h3 { 
+    font-size: 22px; 
+    text-align: center; 
+    margin-bottom: 25px; 
   }
-
-  .indash {
+  .indash{
     display: flex;
     flex-direction: column;
-    align-items: center; 
+    align-items: center;
     justify-content: center;
     gap: 15px;
     width: 100%;
   }
-
-  .dash {
-    width: 90%; 
-    max-width: 340px;
-    margin: 0 auto;
-    padding: 18px;
-    border-radius: 10px;
-  }
-
-  .dash h4 {
-    font-size: 20px;
-  }
-
-  .dashicon {
-    font-size: 45px;
-  }
-
-  .dash h5 {
-    font-size: 18px;
-  }
-
-  .dash p {
-    font-size: 15px;
-  }
-
-  .valid {
-    font-size: 14px;
-    margin-top: 40px;
+  .load{
     text-align: center;
   }
+  .dash{
+    width: 80%;
+    margin: 0 auto;
+  }
+  .dash h4 { font-size: 20px; } 
+  .dashicon { font-size: 45px; } 
+  .dash h5 { font-size: 18px; } 
+  .dash p { font-size: 15px; } 
+  .valid { font-size: 14px; margin-top: 40px; text-align: center; }
+
 }

@@ -17,7 +17,7 @@ function MpComp() {
 
   const fetchPackages = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/package/all-packages');
+      const res = await axios.get('https://dms-2g0q.onrender.com/api/package/all-packages');
       console.log("API Response:", res.data);
       setPackages(res.data);
     } catch (err) {
@@ -36,7 +36,7 @@ function MpComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this Package?')) {
       try {
-        await axios.delete(`http://localhost:5098/api/package/${id}/delete-package`);
+        await axios.delete(`https://dms-2g0q.onrender.com/api/package/${id}/delete-package`);
         fetchPackages();
       } catch (err) {
         alert(err.response?.data?.message || 'Server error');

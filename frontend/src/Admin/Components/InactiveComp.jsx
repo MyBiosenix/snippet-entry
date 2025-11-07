@@ -11,10 +11,9 @@ function InactiveComp() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // ✅ Fetch inactive users
   const getInactiveUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/auth/inactive-users');
+      const res = await axios.get('https://dms-2g0q.onrender.com/api/auth/inactive-users');
       setUsers(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Server Error');
@@ -25,13 +24,11 @@ function InactiveComp() {
     getInactiveUsers();
   }, []);
 
-  // ✅ Filter users by search
   const filteredInactiveUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ✅ Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredInactiveUsers.slice(indexOfFirstItem, indexOfLastItem);
@@ -43,7 +40,6 @@ function InactiveComp() {
     }
   };
 
-  // ✅ Export to Excel
   const exportToExcel = () => {
     const data = filteredInactiveUsers.map((u, i) => ({
       "Sr No.": i + 1,
@@ -58,7 +54,6 @@ function InactiveComp() {
     XLSX.writeFile(workbook, "DeactivatedUsersList.xlsx");
   };
 
-  // ✅ Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("Deactivated Users List", 14, 15);
@@ -136,7 +131,6 @@ function InactiveComp() {
           </tbody>
         </table>
 
-        {/* ✅ Pagination UI */}
         {filteredInactiveUsers.length > 0 && (
           <div className="pagination-container">
             <div className="pagination">

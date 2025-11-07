@@ -13,7 +13,6 @@ function APComp() {
   const [nameError, setNameError] = useState('');
   const [priceError, setPriceError] = useState('');
 
-  // ✅ Prefill form when editing
   useEffect(() => {
     if (packageToEdit) {
       setName(packageToEdit.name || '');
@@ -39,16 +38,15 @@ function APComp() {
 
     try {
       if (packageToEdit) {
-        // ✅ Edit package
         const res = await axios.put(
-          `http://localhost:5098/api/package/${packageToEdit._id}/edit-package`,
+          `https://dms-2g0q.onrender.com/api/package/${packageToEdit._id}/edit-package`,
           { name, price }
         );
         alert(res.data.message || "Package updated successfully");
       } else {
-        // ✅ Create new package
+
         const res = await axios.post(
-          'http://localhost:5098/api/package/create-package',
+          'https://dms-2g0q.onrender.com/api/package/create-package',
           { name, price }
         );
         alert(res.data.message || "Package added successfully");

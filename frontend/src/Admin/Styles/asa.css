@@ -20,7 +20,7 @@
 
 .inasacomp {
   padding: 30px 25px;
-  background: #fff;
+  background: radial-gradient(circle, #fdf5e6 0%, #f5deb3 100%);;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
@@ -34,7 +34,7 @@
 .form {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 15px; /* clean spacing */
+  gap: 15px;
 }
 
 .form input,
@@ -95,11 +95,9 @@
 
 @media screen and (max-width: 450px) {
   .asacomp {
-    width: 90%;
-    max-width: 400px;
-    margin: 20px auto;
-    padding: 15px;
+    width: 100%;
     box-sizing: border-box;
+    
   }
 
   .asacomp h3 {
@@ -123,7 +121,9 @@
   .form {
     display: flex;
     flex-direction: column;
+    align-items:center;
     gap: 15px;
+    padding: 10px;
   }
 
   .form input,
@@ -145,7 +145,7 @@
     margin-top: 20px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 10px;
   }
 
   .bttns button {

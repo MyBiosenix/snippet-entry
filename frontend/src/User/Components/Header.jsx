@@ -25,7 +25,7 @@ function Header() {
 
   try {
     const token = localStorage.getItem('token');
-    await fetch("http://localhost:5098/api/auth/logout", {
+    await fetch("https://dms-2g0q.onrender.com/api/auth/logout", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -35,7 +35,7 @@ function Header() {
     localStorage.removeItem('userId');
     localStorage.removeItem('isActive');
 
-    navigate('/login');
+    navigate('/');
   } catch (err) {
     console.error("Logout failed:", err);
     alert("Error logging out. Please try again.");
@@ -59,7 +59,7 @@ function Header() {
         </div>
 
         <div className={`sidebar ${open ? 'open':''}`}>
-            <p className='myp' onClick={() => navigate('/')}><FaTachometerAlt/>Dashboard</p>
+            <p className='myp' onClick={() => navigate('/home')}><FaTachometerAlt/>Dashboard</p>
             <p className='myp' onClick={() => navigate('/work')}><FaKeyboard/>Typing Work</p>
 
 

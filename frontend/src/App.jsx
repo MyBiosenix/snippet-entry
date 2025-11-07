@@ -34,9 +34,9 @@ function App() {
 
           {/* User Routes */}
           <Route 
-            path='/' 
+            path='/home' 
             element={<Home/>}/>
-          <Route path='/login' element={<Login/>}/>
+          <Route path='/' element={<Login/>}/>
           <Route 
             path='/work' 
             element={

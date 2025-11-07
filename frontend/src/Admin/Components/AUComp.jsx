@@ -30,7 +30,7 @@ function AUComp() {
 
   const getAdminNames = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/admin/adminnames');
+      const res = await axios.get('https://dms-2g0q.onrender.com/api/admin/adminnames');
       setAdminList(res.data);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching admins");
@@ -39,7 +39,7 @@ function AUComp() {
 
   const getPackageNames = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/package/package-names');
+      const res = await axios.get('https://dms-2g0q.onrender.com/api/package/package-names');
       setPackagesList(res.data);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching packages");
@@ -51,7 +51,6 @@ function AUComp() {
     getPackageNames();
   }, []);
 
-  // Prefill form if editing
   useEffect(() => {
     if (userToEdit) {
       setName(userToEdit.name || '');
@@ -66,7 +65,6 @@ function AUComp() {
   }, [userToEdit]);
 
   const handleUser = async () => {
-    // Reset errors
     setNameError('');
     setEmailError('');
     setMobileError('');
@@ -98,15 +96,13 @@ function AUComp() {
     if (valid) {
       try {
         if (userToEdit) {
-          // Edit user
-          const res = await axios.put(`http://localhost:5098/api/auth/${userToEdit._id}/edit-user`, {
+          const res = await axios.put(`https://dms-2g0q.onrender.com/api/auth/${userToEdit._id}/edit-user`, {
             name, email, mobile, admin, packages, price, paymentoptions, date
           });
           alert(res.data.message);
           navigate('/admin/manage-user');
         } else {
-          // Create user
-          const res = await axios.post('http://localhost:5098/api/auth/create-user', {
+          const res = await axios.post('https://dms-2g0q.onrender.com/api/auth/create-user', {
             name, email, mobile, admin, packages, price, paymentoptions, date
           });
           alert(res.data.message);

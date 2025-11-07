@@ -10,29 +10,25 @@ const ProtectedRoute = ({ children }) => {
     const checkUserStatus = async () => {
       const token = localStorage.getItem("token");
 
-      // 🚫 No token = not logged in
       if (!token) {
         setIsAllowed(false);
         return;
       }
 
       try {
-        // ✅ Verify user is authenticated and active
-        await axios.get("http://localhost:5098/api/auth/check-auth", {
+        await axios.get("https://dms-2g0q.onrender.com/api/auth/check-auth", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsAllowed(true);
       } catch (err) {
         console.error("Auth check failed:", err?.response?.data || err);
 
-        // ❌ Handle all expected auth errors
         const status = err.response?.status;
         if ([401, 403, 404].includes(status)) {
           localStorage.removeItem("token");
           localStorage.removeItem("userId");
           setIsAllowed(false);
         } else {
-          // Unexpected error (e.g., server down)
           setIsAllowed(false);
         }
       }
@@ -41,7 +37,6 @@ const ProtectedRoute = ({ children }) => {
     checkUserStatus();
   }, []);
 
-  // 🕓 While verifying authentication
   if (isAllowed === null)
     return (
       <div className="myerrs">
@@ -49,8 +44,7 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
 
-  // ✅ If allowed → render children, otherwise → redirect to login
-  return isAllowed ? children : <Navigate to="/login" replace />;
+  return isAllowed ? children : <Navigate to="/" replace />;
 };
 
 export default ProtectedRoute;

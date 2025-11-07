@@ -28,11 +28,11 @@ function CPComp() {
 
     if(valid){
       try{
-        const res = await axios.put(`http://localhost:5098/api/auth/${id}/change-password`,{
+        const res = await axios.put(`https://dms-2g0q.onrender.com/api/auth/${id}/change-password`,{
             password, newPassword:newPass
         });
         alert(res.data.message);
-        navigate('/')
+        navigate('/home')
       }
       catch(err){
         if(err.response && err.response.data && err.response.data.message){
@@ -60,7 +60,7 @@ function CPComp() {
              {newpassError && <p className="error">{newpassError}</p>}
         </div>
         <div className="bttns">
-          <button className="cancel" onClick={() => navigate('/')}>Cancel</button>
+          <button className="cancel" onClick={() => navigate('/home')}>Cancel</button>
           <button className="submit" onClick={handlesubmit}>Submit</button>
         </div>
       </div>
