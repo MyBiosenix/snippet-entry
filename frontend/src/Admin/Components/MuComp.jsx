@@ -13,7 +13,6 @@ function MuComp() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
-  const token = localStorage.getItem('token');
   const admin = JSON.parse(localStorage.getItem('admin'));
   const role = admin?.role;
 
@@ -77,6 +76,7 @@ function MuComp() {
     }
   };
 
+  // 📦 Export to Excel
   const exportToExcel = () => {
     const data = filteredUsers.map((u, i) => ({
       "Sr No.": i + 1,
@@ -84,7 +84,8 @@ function MuComp() {
       "Package Taken": u.packages?.name || 'No Package',
       "Email": u.email,
       "Password": u.password,
-      "Status": u.isActive ? "Active" : "Inactive"
+      "Status": u.isActive ? "Active" : "Inactive",
+      "Expiry Date": new Date(u.date).toLocaleDateString()
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -93,18 +94,20 @@ function MuComp() {
     XLSX.writeFile(workbook, "UsersList.xlsx");
   };
 
+  // 📄 Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("Users List", 14, 15);
 
-    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Password", "Status"];
+    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Password", "Status", "Expiry Date"];
     const tableRows = filteredUsers.map((u, i) => [
       i + 1,
       u.name,
       u.packages?.name || 'No Package',
       u.email,
       u.password,
-      u.isActive ? "Active" : "Inactive"
+      u.isActive ? "Active" : "Inactive",
+      new Date(u.date).toLocaleDateString()
     ]);
 
     autoTable(doc, {
@@ -160,6 +163,7 @@ function MuComp() {
               <th>Email Id</th>
               <th>Password</th>
               <th>Status</th>
+              <th>Expiry Date</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -179,6 +183,7 @@ function MuComp() {
                       <span style={{ color: 'red', fontWeight: 'bold' }}>Inactive</span>
                     )}
                   </td>
+                  <td>{new Date(u.date).toLocaleDateString()}</td>
                   <td className='mybtnnns'>
                     {role === 'superadmin' && (
                       <>
@@ -217,14 +222,13 @@ function MuComp() {
               ))
             ) : (
               <tr>
-                <td colSpan='7' style={{ textAlign: 'center', color: 'gray' }}>
+                <td colSpan='8' style={{ textAlign: 'center', color: 'gray' }}>
                   No users found
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-
 
         {filteredUsers.length > 0 && (
           <div className="pagination-container">
@@ -237,10 +241,10 @@ function MuComp() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 }
 
 export default MuComp;
+ 

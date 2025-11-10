@@ -24,6 +24,7 @@ const UserSchema = new mongoose.Schema({
       totalErrorPercentage: { type: Number, default: 0 },
       createdAt: { type: Date, default: Date.now },
       visibleToUser: { type: Boolean, default: false },
+      pageNumber: { type: Number },
     }
   ],
 

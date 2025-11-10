@@ -6,6 +6,7 @@ function ResultComp() {
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [visibleTotal, setVisibleTotal] = useState(0);
   const [editValues, setEditValues] = useState({
     capitalSmall: 0,
     punctuation: 0,
@@ -20,15 +21,22 @@ function ResultComp() {
 
   useEffect(() => {
     if (!userId) return;
-    fetch(`https://dms-2g0q.onrender.com/api/snippet/results/${userId}`)
+    fetch(`http://localhost:5098/api/snippet/results/${userId}`)
       .then(res => res.json())
       .then(data => setResults(data))
       .catch(err => console.error(err));
   }, [userId]);
 
+  useEffect(() => {
+    const total = results
+      .filter(r => r.visibleToUser)
+      .reduce((sum, r) => sum + Number(r.totalErrorPercentage || 0), 0);
+    setVisibleTotal(total);
+  }, [results]);
+
   const handleToggleVisibility = async (errorId) => {
     try {
-      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/toggle/${userId}/${errorId}`, {
+      const res = await fetch(`http://localhost:5098/api/snippet/toggle/${userId}/${errorId}`, {
         method: "PATCH",
       });
       const data = await res.json();
@@ -61,7 +69,6 @@ function ResultComp() {
   };
 
   const handleEditClick = (r) => {
-    console.log("Edit mode triggered for:", r); 
     setSelected(r);
     setEditMode(true);
     setEditValues({
@@ -73,20 +80,12 @@ function ResultComp() {
     });
   };
 
-
   const calculateTotal = (vals) => {
-    // Option A: weights are percentages
-    // capitalSmall: 0.90%
-    // punctuation: 0.70%
-    // others: 1%
     const cs = Number(vals.capitalSmall || 0);
     const p = Number(vals.punctuation || 0);
     const mw = Number(vals.missingExtraWord || 0);
     const s = Number(vals.spelling || 0);
-
-    const total = (cs * 0.9) + (p * 0.7) + (mw * 1) + (s * 1);
-  
-    return total;
+    return (cs * 0.9) + (p * 0.7) + (mw * 1) + (s * 1);
   };
 
   const handleEditChange = (e) => {
@@ -118,7 +117,7 @@ function ResultComp() {
     };
 
     try {
-      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/update/${userId}/${errorId}`, {
+      const res = await fetch(`http://localhost:5098/api/snippet/update/${userId}/${errorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -131,15 +130,15 @@ function ResultComp() {
 
       setResults(prev =>
         prev.map(r =>
-          r._id === errorId ? { ...r, ...r.snippetId && { snippetId: r.snippetId }, ...r.userText && { userText: r.userText }, ...data.updated } : r
+          r._id === errorId ? { ...r, ...data.updated } : r
         )
       );
 
       setSelected(prev => ({
         ...prev,
         ...data.updated,
-        snippetId: prev.snippetId, 
-        userText: prev.userText,   
+        snippetId: prev.snippetId,
+        userText: prev.userText,
       }));
 
       setEditMode(false);
@@ -223,7 +222,7 @@ function ResultComp() {
       <div className="user-info">
         <p><b>Name:</b> {user?.name}</p>
         <p><b>Email:</b> {user?.email}</p>
-        <p><b>Package:</b> {JSON.stringify(user?.packages.name)}</p>
+        <p><b>Package:</b> {JSON.stringify(user?.packages?.name)}</p>
         <p><b>Mobile:</b> {user?.mobile}</p>
       </div>
 
@@ -231,14 +230,18 @@ function ResultComp() {
 
       <div className="result-layout">
         <div className="result-sidebar">
+          <h3 className="visible-total">
+            Total Error (Visible Pages): {visibleTotal.toFixed(2)}%
+          </h3>
           {results.map((r, idx) => (
             <div key={r._id || idx} className="snippet-item-wrapper">
               <p
                 className={`snippet-item ${selected?._id === r._id ? "active" : ""}`}
                 onClick={() => handleSnippetClick(r)}
               >
-                Page {idx + 1}
+                Page {idx + 1} – {Number(r.totalErrorPercentage || 0).toFixed(2)}%
               </p>
+
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
                 <button
                   className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
@@ -260,12 +263,9 @@ function ResultComp() {
         <div className="result-details">
           {selected ? (
             <>
-              <h3 className="snippet-title">{selected.snippetId?.title}</h3>
-              <p><strong>Original:</strong> {selected.snippetId?.content}</p>
-
-              {editMode ? (
+              {editMode && (
                 <>
-                  <h4>Edit errors for this snippet</h4>
+                  <h3 className="edit-title">Edit Errors for this Snippet</h3>
                   <div className="edit-form">
                     <label>
                       Capital/Small:
@@ -308,20 +308,45 @@ function ResultComp() {
                       />
                     </label>
 
-                    <p><strong>Auto-calculated Total % Error:</strong> {editValues.totalErrorPercentage.toFixed(2)}%</p>
+                    <p className="edit-total">
+                      <b>Total % Error:</b> {editValues.totalErrorPercentage.toFixed(2)}%
+                    </p>
 
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={handleSaveEdits}>Save</button>
-                      <button onClick={handleCancelEdit}>Cancel</button>
+                    <div className="edit-actions">
+                      <button onClick={handleSaveEdits}>💾 Save</button>
+                      <button onClick={handleCancelEdit}>❌ Cancel</button>
                     </div>
                   </div>
                 </>
-              ) : (
+              )}
+
+              {!editMode && (
                 <>
-                  <p>
-                    <strong>User Text:</strong>{" "}
-                    <span>{highlightErrors(selected.snippetId?.content, selected.userText)}</span>
-                  </p>
+                  <div className="text-comparison">
+                    <div className="text-box original-box">
+                      <h4 className="snippet-title">Original</h4>
+                      <div className="scrollable-text">
+                        {selected.snippetId?.content || <i>No text</i>}
+                      </div>
+                    </div>
+
+                    <div className="text-box user-box">
+                      <h4 className="snippet-title">User Text</h4>
+                      <div className="scrollable-text">
+                        {(
+                          Number(selected.capitalSmall) > 0 ||
+                          Number(selected.punctuation) > 0 ||
+                          Number(selected.missingExtraWord) > 0 ||
+                          Number(selected.spelling) > 0
+                        ) ? (
+                          highlightErrors(selected.snippetId?.content, selected.userText)
+                        ) : (
+                          <span>{selected.userText}</span>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
 
                   <h4 className="error-heading">Errors</h4>
                   <ul className="error-list">
@@ -329,7 +354,9 @@ function ResultComp() {
                     <li>Punctuation: {selected.punctuation}</li>
                     <li>Missing/Extra Word: {selected.missingExtraWord}</li>
                     <li>Spelling: {selected.spelling}</li>
-                    <li><b>Total % Error: {Number(selected.totalErrorPercentage || 0).toFixed(2)}%</b></li>
+                    <li>
+                      <b>Total % Error:</b> {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
+                    </li>
                   </ul>
                 </>
               )}

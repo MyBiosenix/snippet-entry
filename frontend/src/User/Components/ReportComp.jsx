@@ -17,63 +17,51 @@ function ReportComp() {
   const userId = localStorage.getItem("userId");
 
   useEffect(() => {
-    if (!userId) return;
+  if (!userId) return;
 
-    fetch(`https://dms-2g0q.onrender.com/api/snippet/user-visible/${userId}`)
-      .then(res => res.json())
-      .then(data => setResults(data))
-      .catch(err => console.error(err));
-  }, [userId]);
+  fetch(`http://localhost:5098/api/snippet/user-visible/${userId}`)
+    .then(res => res.json())
+    .then(data => {
+      console.log("Fetched data:", data); // 👈 check this in console
+      setResults(data);
+    })
+    .catch(err => console.error(err));
+}, [userId]);
 
-  function highlightErrors(original, userText) {
-    if (!original || !userText) return <span>No text available</span>;
 
-    const origWords = original.split(/\s+/).filter(Boolean);
-    const userWords = userText.split(/\s+/).filter(Boolean);
-    const stripPunct = s => s.replace(/[^A-Za-z0-9]/g, "");
+  function highlightErrors(original, userText, evalResult = {}) {
+  if (!original || !userText) return <span>No text available</span>;
 
-    function lcsIndices(a, b) {
-      const n = a.length, m = b.length;
-      const dp = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));
-      for (let i = 1; i <= n; i++)
-        for (let j = 1; j <= m; j++)
-          dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  // Extract the evaluator’s word-level info (if you include it in backend response)
+  const { capitalSmall = 0, punctuation = 0, missingExtraWord = 0, spelling = 0 } = evalResult;
 
-      let i = n, j = m, pairs = [];
-      while (i > 0 && j > 0) {
-        if (a[i - 1] === b[j - 1]) { pairs.unshift([i - 1, j - 1]); i--; j--; }
-        else if (dp[i - 1][j] >= dp[i][j - 1]) i--; else j--;
-      }
-      return pairs;
-    }
+  // Basic safe tokenization
+  const origWords = original.split(/\s+/).filter(Boolean);
+  const userWords = userText.split(/\s+/).filter(Boolean);
 
-    const origNorm = origWords.map(w => stripPunct(w).toLowerCase());
-    const userNorm = userWords.map(w => stripPunct(w).toLowerCase());
-    const matchedPairs = lcsIndices(origNorm, userNorm);
+  // Simple 1-to-1 display (we rely on backend evaluation, not frontend guessing)
+  const result = [];
 
-    let res = [], oPrev = -1, uPrev = -1;
+  userWords.forEach((word, idx) => {
+    let className = "";
 
-    for (let k = 0; k <= matchedPairs.length; k++) {
-      const [oNext, uNext] = matchedPairs[k] || [origWords.length, userWords.length];
-      const origSeg = origWords.slice(oPrev + 1, oNext);
-      const userSeg = userWords.slice(uPrev + 1, uNext);
+    // Apply highlights **only if** evaluator actually detected that kind of mistake
+    if (spelling > 0 && word.includes("*")) className = "error-red";
+    else if (capitalSmall > 0 && /^[A-Z]/.test(word)) className = "error-orange";
+    else if (punctuation > 0 && /[,.!?;:'"()]/.test(word)) className = "error-blue";
+    else if (missingExtraWord > 0) className = "error-red";
+    else className = "";
 
-      for (let uw of userSeg) res.push(<span key={"extra-" + res.length} className="error-red">{uw} </span>);
-      for (let ow of origSeg.slice(userSeg.length)) res.push(<span key={"miss-" + res.length} className="error-red">(missing:{ow}) </span>);
+    result.push(
+      <span key={idx} className={className}>
+        {word}{" "}
+      </span>
+    );
+  });
 
-      if (oNext < origWords.length && uNext < userWords.length) {
-        const ow = origWords[oNext], uw = userWords[uNext];
-        if (ow === uw) res.push(<span key={"ok-" + res.length}>{uw} </span>);
-        else if (ow.toLowerCase() === uw.toLowerCase()) res.push(<span key={"cap-" + res.length} className="error-orange">{uw} </span>);
-        else if (stripPunct(ow).toLowerCase() === stripPunct(uw).toLowerCase()) res.push(<span key={"punc-" + res.length} className="error-blue">{uw} </span>);
-        else res.push(<span key={"spell-" + res.length} className="error-red">{uw} </span>);
-      }
+  return result;
+}
 
-      oPrev = oNext; uPrev = uNext;
-    }
-
-    return res;
-  }
 
   const generateCSV = () => {
     if (results.length === 0) return "";
@@ -152,7 +140,7 @@ function ReportComp() {
     totalErrorSum += total;
 
     const row = sheet.addRow([
-      `Page ${idx + 1}`,
+      `Page ${r.pageNumber || idx + 1}`,
       r.capitalSmall,
       r.punctuation,
       r.missingExtraWord,
@@ -225,7 +213,7 @@ function ReportComp() {
               className={selectedIndex === idx ? "active-btn" : ""}
               onClick={() => setSelectedIndex(idx)}
             >
-              Page {idx + 1}
+              Page {r.pageNumber}
             </button>
           ))}
           <button className="download-btn" onClick={() => setShowModal(true)}>Download Report</button>
@@ -237,17 +225,17 @@ function ReportComp() {
       {results[selectedIndex] && (
         <div key={results[selectedIndex]._id} className="report-block">
           <h3 className="snippet-title">
-            Page {selectedIndex + 1}
+            Page {results[selectedIndex].pageNumber}
           </h3>
 
           <div className="snippet-flex">
             <div className="snippet-box original">
-              <h4>Original Text</h4>
+              <h4>Original Image</h4>
               <p>{results[selectedIndex].snippetId?.content}</p>
             </div>
 
             <div className="snippet-box user">
-              <h4>Your Text</h4>
+              <h4>Your Submitted Work</h4>
               <p>{highlightErrors(results[selectedIndex].snippetId?.content, results[selectedIndex].userText)}</p>
             </div>
           </div>
@@ -288,7 +276,7 @@ function ReportComp() {
           <tbody>
             {results.map((r, idx) => (
               <tr key={r._id}>
-                <td>Page {idx + 1}</td>
+                <td>Page {results[selectedIndex].pageNumber}</td>
                 <td>{r.capitalSmall}</td>
                 <td>{r.punctuation}</td>
                 <td>{r.missingExtraWord}</td>

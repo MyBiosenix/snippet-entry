@@ -73,8 +73,14 @@ const submitSnippet = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.myerrors.push({ snippetId, userText, ...errors });
+    user.myerrors.push({
+      snippetId,
+      userText,
+      pageNumber: user.currentIndex + 1,
+      ...errors
+    });
 
+    user.markModified("myerrors");
     user.currentIndex = user.currentIndex + 1;
     await user.save();
 

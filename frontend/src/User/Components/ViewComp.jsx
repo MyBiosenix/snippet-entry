@@ -44,19 +44,19 @@ function ViewComp() {
 
             <div className="snippet-flex">
               <div className="snippet-box original">
-                <h4>Original Text</h4>
+                <h4>Original Image</h4>
                 <p>{results[selectedIndex]?.snippetId?.content || "No original text found."}</p>
               </div>
 
               <div className="snippet-box user">
-                <h4>Your Submitted Text</h4>
+                <h4>Your Submitted Work</h4>
                 <p>{results[selectedIndex]?.userText || "No user submission found."}</p>
               </div>
             </div>
           </div>
         </>
       ) : (
-        <p className="no-report">No submitted snippets found.</p>
+        <p className="no-report">No Submitted Work Found.</p>
       )}
     </div>
   );
