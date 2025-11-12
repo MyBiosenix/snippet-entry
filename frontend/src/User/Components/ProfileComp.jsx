@@ -31,9 +31,7 @@ function ProfileComp() {
         <p><strong>Email:</strong> <span>{user.email}</span></p>
         <p><strong>Password:</strong> <span>{user.password}</span></p>
         <p><strong>Mobile No.:</strong> <span>{user.mobile}</span></p>
-        <p><strong>Admin:</strong> <span>{user.admin?.name}</span></p>
         <p><strong>Package:</strong> <span>{user.packages?.name}</span></p>
-        <p><strong>Price:</strong> <span>{user.price}</span></p>
         <p><strong>Subscription Validity:</strong> 
           <span>{user.date ? new Date(user.date).toLocaleDateString() : '—'}</span>
         </p>

@@ -116,7 +116,7 @@ function ResultComp() {
       totalErrorPercentage: editValues.totalErrorPercentage,
     };
 
-    try {
+    try {        
       const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/update/${userId}/${errorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

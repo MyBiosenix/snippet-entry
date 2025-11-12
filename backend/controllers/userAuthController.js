@@ -123,7 +123,7 @@ exports.getUsers = async(req,res) => {
     }
 }
 function getRandomPassword(length = 7){
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&!()';
     let password = '';
     for(let i = 0; i<= length; i++){
         password += chars.charAt(Math.floor(Math.random()*chars.length))

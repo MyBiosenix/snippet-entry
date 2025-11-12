@@ -56,12 +56,12 @@
     background-color: blue;
     color: white;
 }
-/*.no-copy {
+.no-copy {
   user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
   -moz-user-select: none;
-}*/
+}
 
 textarea {
   ime-mode: disabled;
