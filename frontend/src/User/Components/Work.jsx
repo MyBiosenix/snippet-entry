@@ -41,7 +41,7 @@ function Work() {
   useEffect(() => {
     fetchNextSnippet();
 
-    /*const handleContextMenu = (e) => e.preventDefault();
+    const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
       if (
         (e.ctrlKey && (e.key === "c" || e.key === "v" || e.key === "x" || e.key === "a")) ||
@@ -56,7 +56,7 @@ function Work() {
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
-    };*/
+    };
   }, []);
 
   const handleSubmit = async () => {
@@ -95,9 +95,9 @@ function Work() {
           <div className="workarea">
             <div
               className="para no-copy"
-              /*onCopy={(e) => e.preventDefault()}
+              onCopy={(e) => e.preventDefault()}
               onSelect={(e) => e.preventDefault()}
-              onContextMenu={(e) => e.preventDefault()}*/
+              onContextMenu={(e) => e.preventDefault()}
             >
               <p>{snippet.content}</p>
             </div>
@@ -110,14 +110,14 @@ function Work() {
                 }
                 value={userText}
                 onChange={(e) => setUserText(e.target.value)}
-                /*disabled={isCompleted}*/
-                /*autoCorrect="off"
+                disabled={isCompleted}
+                autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck="false"
                 onPaste={(e) => e.preventDefault()}
                 onCopy={(e) => e.preventDefault()}
                 onCut={(e) => e.preventDefault()}
-                onContextMenu={(e) => e.preventDefault()}*/
+                onContextMenu={(e) => e.preventDefault()}
               ></textarea>
 
               <button onClick={handleSubmit} disabled={isCompleted}>

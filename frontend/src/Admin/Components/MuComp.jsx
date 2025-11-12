@@ -58,7 +58,6 @@ function MuComp() {
     }
   };
 
-  // 🔍 Search filter
   const filteredUsers = users.filter(
     (u) =>
       u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

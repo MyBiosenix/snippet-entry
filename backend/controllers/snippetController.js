@@ -68,28 +68,35 @@ const submitSnippet = async (req, res) => {
     const snippet = await Snippets.findById(snippetId);
     if (!snippet) return res.status(404).json({ message: "Snippet not found" });
 
-    const errors = evaluateSnippet(snippet.content, userText);
+    // ✅ Use new evaluator with debug enabled
+    const { myerrors, debugParts } = evaluateSnippet(snippet.content, userText, { debug: true });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Save only myerrors to the user data (not debugParts)
     user.myerrors.push({
       snippetId,
       userText,
       pageNumber: user.currentIndex + 1,
-      ...errors
+      ...myerrors,
     });
 
     user.markModified("myerrors");
     user.currentIndex = user.currentIndex + 1;
     await user.save();
 
-    res.json({ message: "Evaluation saved", errors });
-
+    // ✅ Return both myerrors and debugParts in API response
+    res.json({
+      message: "Evaluation saved",
+      errors: myerrors,
+      debug: debugParts,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 const getUserResults = async (req, res) => {
   try {
