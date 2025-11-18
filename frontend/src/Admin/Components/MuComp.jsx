@@ -22,7 +22,7 @@ function MuComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('https://dms-2g0q.onrender.com/api/auth/all-users');
+      const res = await axios.get('https://api.freelancing-project.com/api/auth/all-users');
       setUsers(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Error fetching users');
@@ -31,7 +31,7 @@ function MuComp() {
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://dms-2g0q.onrender.com/api/auth/${id}/activate`);
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -40,7 +40,7 @@ function MuComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://dms-2g0q.onrender.com/api/auth/${id}/deactivate`);
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -50,7 +50,7 @@ function MuComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        await axios.delete(`https://dms-2g0q.onrender.com/api/auth/${id}/delete`);
+        await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
         fetchUsers();
       } catch (err) {
         alert(err.response?.data?.message || 'Server error');

@@ -13,7 +13,7 @@ function MaComp() {
 
   const fetchAdmins = async () => {
     try {
-      const res = await axios.get('https://dms-2g0q.onrender.com/api/admin/all-admins');
+      const res = await axios.get('https://api.freelancing-project.com/api/admin/all-admins');
       setAdmins(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Server Error');
@@ -23,7 +23,7 @@ function MaComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this admin?')) {
       try {
-        await axios.delete(`https://dms-2g0q.onrender.com/api/admin/${id}/delete`);
+        await axios.delete(`https://api.freelancing-project.com/api/admin/${id}/delete`);
         fetchAdmins();
       } catch (err) {
         alert(err.response?.data?.message || 'Server Error');

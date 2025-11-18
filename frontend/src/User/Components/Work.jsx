@@ -13,7 +13,7 @@ function Work() {
 
   const fetchNextSnippet = async () => {
     try {
-      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/next/${userId}`, {
+      const res = await fetch(`https://api.freelancing-project.com/api/snippet/next/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -68,7 +68,7 @@ function Work() {
     if (!confirmSubmit) return;
 
     try {
-      await fetch("https://dms-2g0q.onrender.com/api/snippet/submit", {
+      await fetch("https://api.freelancing-project.com/api/snippet/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

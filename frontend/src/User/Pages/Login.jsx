@@ -21,7 +21,7 @@ function Login() {
       if (!token || !userId) return;
 
       try {
-        const res = await axios.get(`https://dms-2g0q.onrender.com/api/auth/verify/${userId}`, {
+        const res = await axios.get(`https://api.freelancing-project.com/api/auth/verify/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -63,7 +63,7 @@ function Login() {
 
     if (valid) {
       try {
-        const res = await axios.post('https://dms-2g0q.onrender.com/api/auth/login', {
+        const res = await axios.post('https://api.freelancing-project.com/api/auth/login', {
           email,
           password,
           forceLogin: false,
@@ -86,7 +86,7 @@ function Login() {
           );
           if (confirmForce) {
             try {
-              const res2 = await axios.post('https://dms-2g0q.onrender.com/api/auth/login', {
+              const res2 = await axios.post('https://api.freelancing-project.com/api/auth/login', {
                 email,
                 password,
                 forceLogin: true,

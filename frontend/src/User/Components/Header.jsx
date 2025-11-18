@@ -25,7 +25,7 @@ function Header() {
 
   try {
     const token = localStorage.getItem('token');
-    await fetch("https://dms-2g0q.onrender.com/api/auth/logout", {
+    await fetch("https://api.freelancing-project.com/api/auth/logout", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });

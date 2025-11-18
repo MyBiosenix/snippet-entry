@@ -28,7 +28,7 @@ function CPComp() {
 
     if(valid){
       try{
-        const res = await axios.put(`https://dms-2g0q.onrender.com/api/auth/${id}/change-password`,{
+        const res = await axios.put(`https://api.freelancing-project.com/api/auth/${id}/change-password`,{
             password, newPassword:newPass
         });
         alert(res.data.message);

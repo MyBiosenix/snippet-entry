@@ -55,14 +55,14 @@ function AsaComp() {
     if(valid){
       try{
         if(adminToEdit){
-          const res = await axios.put(`https://dms-2g0q.onrender.com/api/admin/${adminToEdit._id}/edit-admin`,{
+          const res = await axios.put(`https://api.freelancing-project.com/api/admin/${adminToEdit._id}/edit-admin`,{
             name, email, role, password
           });
           alert(res.data.message);
           navigate('/admin/manage-admin');
         }
         else{
-          const res = await axios.post('https://dms-2g0q.onrender.com/api/admin/create-admin',{
+          const res = await axios.post('https://api.freelancing-project.com/api/admin/create-admin',{
           name, email, role,password
           });
           alert(res.data.message);

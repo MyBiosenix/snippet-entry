@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "https://dms-2g0q.onrender.com/api", 
+  baseURL: "https://api.freelancing-project.com/api", 
 });
 
 axiosInstance.interceptors.request.use(

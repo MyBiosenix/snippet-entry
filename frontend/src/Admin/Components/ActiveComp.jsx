@@ -13,7 +13,7 @@ function ActiveComp() {
 
   const getActiveUsers = async () => {
     try {
-      const res = await axios.get('https://dms-2g0q.onrender.com/api/auth/active-users');
+      const res = await axios.get('https://api.freelancing-project.com/api/auth/active-users');
       setUsers(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Error Fetching Active Users');

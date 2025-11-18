@@ -21,7 +21,7 @@ function ResultComp() {
 
   useEffect(() => {
     if (!userId) return;
-    fetch(`https://dms-2g0q.onrender.com/api/snippet/results/${userId}`)
+    fetch(`https://api.freelancing-project.com/api/snippet/results/${userId}`)
       .then(res => res.json())
       .then(data => setResults(data))
       .catch(err => console.error(err));
@@ -36,7 +36,7 @@ function ResultComp() {
 
   const handleToggleVisibility = async (errorId) => {
     try {
-      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/toggle/${userId}/${errorId}`, {
+      const res = await fetch(`https://api.freelancing-project.com/api/snippet/toggle/${userId}/${errorId}`, {
         method: "PATCH",
       });
       const data = await res.json();
@@ -117,7 +117,7 @@ function ResultComp() {
     };
 
     try {        
-      const res = await fetch(`https://dms-2g0q.onrender.com/api/snippet/update/${userId}/${errorId}`, {
+      const res = await fetch(`https://api.freelancing-project.com/api/snippet/update/${userId}/${errorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -19,7 +19,7 @@ function ReportComp() {
   useEffect(() => {
   if (!userId) return;
 
-  fetch(`https://dms-2g0q.onrender.com/api/snippet/user-visible/${userId}`)
+  fetch(`https://api.freelancing-project.com/api/snippet/user-visible/${userId}`)
     .then(res => res.json())
     .then(data => {
       console.log("Fetched data:", data); // 👈 check this in console

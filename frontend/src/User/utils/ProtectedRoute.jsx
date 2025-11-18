@@ -16,7 +16,7 @@ const ProtectedRoute = ({ children }) => {
       }
 
       try {
-        await axios.get("https://dms-2g0q.onrender.com/api/auth/check-auth", {
+        await axios.get("https://api.freelancing-project.com/api/auth/check-auth", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsAllowed(true);
