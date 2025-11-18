@@ -1,7 +1,7 @@
 import React from 'react'
 import CPComp from '../Components/CPComp'
 import Header from '../Components/Header'
-import '../Styles/cp.css'
+import '../Styles/CP.css'
 
 function CP() {
   return (
