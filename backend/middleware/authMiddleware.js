@@ -15,7 +15,6 @@ module.exports = async function (req, res, next) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // 🚨 Check if token matches active session
     if (user.lastLoginSession !== token) {
       return res.status(401).json({ message: "Session expired or logged in elsewhere" });
     }

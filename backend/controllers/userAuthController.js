@@ -22,7 +22,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ id: myuser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: myuser._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     myuser.lastLoginSession = token;
     await myuser.save();

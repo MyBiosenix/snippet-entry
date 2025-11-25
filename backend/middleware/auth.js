@@ -15,7 +15,6 @@ exports.authMiddleware = async (req, res, next) => {
 
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    // ✅ Check if this is the latest active token
     if (user.lastLoginSession !== token) {
       return res
         .status(401)
