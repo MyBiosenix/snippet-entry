@@ -101,27 +101,49 @@
   color: #777;
   font-style: italic;
 }
-.snippet-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
+.snippet-buttons { 
+  display: flex; 
+  gap: 10px; 
+  margin-bottom: 20px; 
+  overflow-x: auto; 
+  white-space: nowrap; 
+  padding: 10px 5px; 
+  border-radius: 10px; 
+  background: #faf3e5; 
+  scrollbar-width: thin; 
+  scrollbar-color: #c8a96f #f7f1e5; 
+} 
+
+.snippet-buttons::-webkit-scrollbar { 
+  height: 6px; 
+} 
+
+.snippet-buttons::-webkit-scrollbar-track { 
+  background: #f7f1e5; 
+  border-radius: 20px; 
+} 
+
+.snippet-buttons::-webkit-scrollbar-thumb { 
+  background: #c8a96f; 
+  border-radius: 20px; 
+} 
+
+.snippet-buttons button { 
+  padding: 8px 14px; 
+  border: 1px solid #8a6d3b; 
+  background: white; 
+  color: black; 
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-size: 14px; 
+  display: inline-block; 
+} 
+.snippet-buttons .active-btn { 
+  background: #8a6d3b; 
+  color: white; 
 }
 
-.snippet-buttons button {
-  padding: 8px 14px;
-  border: 1px solid #8a6d3b;
-  background: white;
-  color: black;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
 
-.snippet-buttons .active-btn {
-  background: #8a6d3b;
-  color: white;
-}
 .download-btn {
   padding: 8px 14px;
   border: 1px solid #3a8a3b;
@@ -183,17 +205,7 @@
 }
 
 @media screen and (max-width: 450px){
-  .report-page{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-  .report-block{
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-  }
+  
   .snippet-flex{
     flex-direction: column;
     align-items: center;
@@ -217,6 +229,26 @@
   }
   .snippet-box.user p{
     font-size: 13px;
+  }
+  .snippet-buttons {
+    width: 90%;
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 8px;
+
+    /* Needed for scroll */
+    flex-wrap: nowrap;
+    white-space: nowrap;
+
+    scrollbar-width: thin;
+    scrollbar-color: #c8a96f #f7f1e5;
+  }
+
+  .snippet-buttons button {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 14px;
   }
   .modal-content {
     width: 92%;

@@ -233,13 +233,18 @@ function ResultComp() {
           <h3 className="visible-total">
             Total Error (Visible Pages): {visibleTotal.toFixed(2)}%
           </h3>
+          <div className="sidebar-scroll">
           {results.map((r, idx) => (
             <div key={r._id || idx} className="snippet-item-wrapper">
               <p
                 className={`snippet-item ${selected?._id === r._id ? "active" : ""}`}
                 onClick={() => handleSnippetClick(r)}
               >
-                Page {idx + 1} – {Number(r.totalErrorPercentage || 0).toFixed(2)}%
+                Page {idx + 1} – {
+                  r.userText?.trim().length === 0 || Number(r.totalErrorPercentage) > 150
+                    ? `${Number(r.totalErrorPercentage || 0).toFixed(2)}% Invalid❗`
+                    : `${Number(r.totalErrorPercentage || 0).toFixed(2)}%`
+                }
               </p>
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -258,6 +263,7 @@ function ResultComp() {
               </div>
             </div>
           ))}
+          </div>
         </div>
 
         <div className="result-details">
