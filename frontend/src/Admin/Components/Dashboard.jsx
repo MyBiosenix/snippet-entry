@@ -63,7 +63,7 @@ function Dashboard() {
     <div className='mydassh'>
         <h3>Dashboard</h3>
         <div className='boxes'>
-            <div className='box'>
+            <div className='box' onClick={()=>navigate('/admin/manage-admin')}>
                 <FaUserShield className='icn'/>
                 <div className='inbox'>
                     <h5>Total Admins</h5>
@@ -71,7 +71,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box'>
+            <div className='box' onClick={()=>navigate('/admin/manage-user')}>
                 <FaUsers className='icn'/>
                 <div className='inbox'>
                     <h5>Total Users</h5>
@@ -79,7 +79,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box'>
+            <div className='box' onClick={() => navigate('/admin/active-users')}>
                 <FaUserCheck className='icn'/>
                 <div className='inbox'>
                     <h5>Active Users</h5>
@@ -87,7 +87,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box'>
+            <div className='box' onClick={() => navigate('/admin/inactive-users')}>
                 <FaUserSlash className='icn'/>
                 <div className='inbox'>
                     <h5>Deactivated Users</h5>
