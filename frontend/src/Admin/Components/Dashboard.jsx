@@ -33,7 +33,7 @@ function Dashboard() {
 
     const getexpiringSoon = async() => {
         try{
-            const res = await axios.get("http://localhost:5098/api/auth/expiring-soon")
+            const res = await axios.get("https://api.freelancing-project.com/api/auth/expiring-soon")
             setExpiringSoon(res.data.totalExpiringSoon);
         }
         catch(err){
@@ -44,7 +44,7 @@ function Dashboard() {
 
     const getTargetsAchieved = async() => {
         try{
-            const res = await axios.get("http://localhost:5098/api/auth/targets-achieved")
+            const res = await axios.get("https://api.freelancing-project.com/api/auth/targets-achieved")
             setTargetsAchieved(res.data.count);
         }
         catch(err){

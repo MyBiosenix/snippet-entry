@@ -22,7 +22,7 @@ function TAComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/auth/targets-achieved');
+      const res = await axios.get('https://api.freelancing-project.com/api/auth/targets-achieved');
       setUsers(res.data.users|| []);
     } catch (err) {
       alert(err.response?.data?.message || 'Error fetching users');
@@ -120,7 +120,7 @@ function TAComp() {
 
   return (
     <div className='comp'>
-      <h3>Expiring Soon</h3>
+      <h3>Goal Achieved</h3>
       <div className='incomp'>
         <div className='go'>
           <h4>Users List</h4>

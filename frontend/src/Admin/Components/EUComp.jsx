@@ -22,7 +22,7 @@ function EUComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/auth/expiring-soon');
+      const res = await axios.get('https://api.freelancing-project.com/api/auth/expiring-soon');
       setUsers(res.data.users|| []);
     } catch (err) {
       alert(err.response?.data?.message || 'Error fetching users');
