@@ -19,12 +19,14 @@ import AU from './Admin/Pages/AU'
 import MP from './Admin/Pages/MP'
 import AP from './Admin/Pages/AP'
 import UQ from './Admin/Pages/UQ'
+import EU from './Admin/Pages/EU'
 import Active from './Admin/Pages/Active'
 import Inactive from './Admin/Pages/Inactive'
 import ChangePassword from './Admin/Pages/ChangePassword'
 import Result from './Admin/Pages/Result'
 
 import ProtectedRoute from './User/utils/ProtectedRoute'
+import TA from './Admin/Pages/TA'
 
 function App() {
   return (
@@ -61,6 +63,8 @@ function App() {
           <Route path='/admin/manage-user' element={<MU/>}/>
           <Route path='/admin/manage-user/add-user' element={<AU/>}/>
           <Route path='/admin/manage-user/result' element={<Result/>}/>
+          <Route path='/admin/expiring-users' element={<EU/>}/>
+          <Route path='/admin/targets-achieved' element={<TA/>}/>
           <Route path='/admin/manage-package' element={<MP/>}/>
           <Route path='/admin/manage-package/add-package' element={<AP/>}/>
           <Route path='/admin/user-queries' element={<UQ/>}/>

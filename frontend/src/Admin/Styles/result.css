@@ -311,7 +311,6 @@
   border-bottom: none;
 }
 
-/* ==== Placeholder ==== */
 .placeholder {
   color: #64748b;
   font-size: 16px;
@@ -319,7 +318,7 @@
   text-align: center;
   margin-top: 60px;
 }
-/* ==== Text Comparison Layout ==== */
+
 .text-comparison {
   display: flex;
   justify-content: space-between;
@@ -354,7 +353,7 @@
   line-height: 1.6;
   font-size: 14px;
   color: #111827;
-  white-space: pre-wrap;
+  white-space: pre-line;
 }
 
 .scrollable-text::-webkit-scrollbar {

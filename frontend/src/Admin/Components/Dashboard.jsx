@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react'
 import '../Styles/dash.css'
-import {FaUserShield, FaUsers, FaUserCheck, FaUserSlash} from 'react-icons/fa'
+import {FaUserShield, FaUsers, FaUserCheck, FaUserSlash, FaClock} from 'react-icons/fa'
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function Dashboard() {
-    const [admins, setAdmins] = useState('');
-    const [users, setUsers] = useState('');
-    const [activeUsers, setActiveUsers] = useState('');
-    const [inActiveUsers, setInactiveUsers] = useState('');
+    const [admins, setAdmins] = useState(0);
+    const [users, setUsers] = useState(0);
+    const [activeUsers, setActiveUsers] = useState(0);
+    const [inActiveUsers, setInactiveUsers] = useState(0);
+    const [expiringSoon, setExpiringSoon] = useState(0);
+    const [targetsachieved, setTargetsAchieved] = useState(0);
+
+    const navigate = useNavigate();
 
     const getStats = async() => {
         try{
@@ -26,8 +31,32 @@ function Dashboard() {
         }
     }
 
+    const getexpiringSoon = async() => {
+        try{
+            const res = await axios.get("http://localhost:5098/api/auth/expiring-soon")
+            setExpiringSoon(res.data.totalExpiringSoon);
+        }
+        catch(err){
+            console.error(err);
+            setExpiringSoon(0);
+        }
+    }
+
+    const getTargetsAchieved = async() => {
+        try{
+            const res = await axios.get("http://localhost:5098/api/auth/targets-achieved")
+            setTargetsAchieved(res.data.count);
+        }
+        catch(err){
+            console.error(err);
+            setTargetsAchieved(0);
+        }
+    }
+
     useEffect(() => {
-        getStats()
+        getStats();
+        getexpiringSoon();
+        getTargetsAchieved();
     },[]);
 
   return (
@@ -63,6 +92,22 @@ function Dashboard() {
                 <div className='inbox'>
                     <h5>Deactivated Users</h5>
                     <h4>{inActiveUsers}</h4>
+                </div>
+            </div>
+
+            <div className='box' onClick={()=>navigate('/admin/expiring-users')}>
+                <FaClock className='icn'/>
+                <div className='inbox'>
+                    <h5>Expiring Soon</h5>
+                    <h4>{expiringSoon}</h4>
+                </div>
+            </div>
+
+            <div className='box' onClick={()=>navigate('/admin/targets-achieved')}>
+                <FaClock className='icn'/>
+                <div className='inbox'>
+                    <h5>Targets Achieved</h5>
+                    <h4>{targetsachieved}</h4>
                 </div>
             </div>
         </div>

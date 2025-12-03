@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats } = require('../controllers/userAuthController');
+const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved } = require('../controllers/userAuthController');
 
 const { checkActiveUser } = require('../middleware/checkActiveUser');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -28,6 +28,8 @@ router.get('/verify/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/expiring-soon',getExpiringSoonUsers);
+router.get('/targets-achieved',targetsAchieved);
 
 router.get('/check-auth',authMiddleware,checkActiveUser,(req,res) => {
     res.json({ active: true });

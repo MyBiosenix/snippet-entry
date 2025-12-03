@@ -29,7 +29,7 @@ const UserSchema = new mongoose.Schema({
   ],
 
   snippetOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: "Snippets" }],
-  currentIndex: { type: Number, default: 0 }, // ✅ new
+  currentIndex: { type: Number, default: 0 },
 });
 
 module.exports = mongoose.model("User", UserSchema);

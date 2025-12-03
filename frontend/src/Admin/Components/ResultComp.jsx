@@ -21,11 +21,33 @@ function ResultComp() {
 
   useEffect(() => {
     if (!userId) return;
+
     fetch(`https://api.freelancing-project.com/api/snippet/results/${userId}`)
       .then(res => res.json())
-      .then(data => setResults(data))
+      .then(data => {
+        const cleaned = data.map(r => {
+        let content = r.snippetId?.content || "";
+        let userText = r.userText || "";
+
+        content = content
+          .replace(/\n{2,}/g, "\n\n")
+          .replace(/([^\n])\n([^\n])/g, "$1 $2");
+
+        userText = userText.replace(/\n+/g, "\n");
+
+        return {
+          ...r,
+          snippetId: { ...r.snippetId, content },
+          userText,
+        };
+      });
+
+      setResults(cleaned);
+    })
+
       .catch(err => console.error(err));
   }, [userId]);
+
 
   useEffect(() => {
     const total = results

@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Snippet = require('../models/Snippet');
+const Packages = require('../models/Package');
 const jwt = require('jsonwebtoken');
 
 exports.login = async (req, res) => {
@@ -108,8 +109,6 @@ exports.createUser = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-
 exports.getUsers = async(req,res) => {
     try{
         const allUsers = await User.find()
@@ -130,7 +129,6 @@ function getRandomPassword(length = 7){
     }
     return password;
 }
-
 exports.activateUser = async(req,res) => {
     try{
         const {id} = req.params;
@@ -141,7 +139,6 @@ exports.activateUser = async(req,res) => {
         res.status(400).json({message: err.message});
     }
 }
-
 exports.deactivateUser = async(req,res) => {
     try{
         const {id} = req.params;
@@ -152,7 +149,6 @@ exports.deactivateUser = async(req,res) => {
         res.status(400).json({message: err.message});
     }
 }
-
 exports.getActiveUsers = async(req,res) => {
     try{
         const activeusers = await User.find({isActive:true})
@@ -162,7 +158,6 @@ exports.getActiveUsers = async(req,res) => {
         res.status(400).json(err.message);
     }
 }
-
 exports.getInActiveUsers = async(req,res) => {
     try{
         const inactiveusers = await User.find({isActive:false});
@@ -283,5 +278,71 @@ exports.fetchStats = async(req,res) => {
             console.error(err);
             res.status(500).json({ message: err.message });
         }
-};  
-    
+};
+exports.getExpiringSoonUsers = async(req,res) => {
+  try{
+    const today = new Date();
+    const next4Days = new Date();
+    next4Days.setDate(today.getDate() + 4);
+
+    const expiringSoonUsers = await User.find({
+      date:{
+        $gte:today,
+        $lte:next4Days
+      }
+    }).populate("packages admin");
+
+    const expiringSoonCount = await User.countDocuments({
+      date:{
+        $gte:today,
+        $lte:next4Days
+      }
+    });
+
+    res.status(200).json({
+      success:true,
+      totalExpiringSoon:expiringSoonCount,
+      users:expiringSoonUsers
+    });
+
+  }
+  catch(err){
+    console.error("Error Fecthing Expiring soon users:", err);
+    res.status(500).json({success:false,message:"Server Error"})
+  }
+}
+
+exports.targetsAchieved = async (req, res) => {
+  try {
+    const users = await User.find()
+      .populate("packages")
+      .lean();
+
+    const accomplishedUsers = users.filter(user => {
+      if (!user.packages) return false;
+
+      const packageName = user.packages.name?.toLowerCase();
+      const currentIndex = user.currentIndex || 0;
+
+      if (packageName === "gold" && currentIndex >= 75) {
+        return true;
+      }
+
+      if (["vip", "diamond"].includes(packageName) && currentIndex >= 150) {
+        return true;
+      }
+
+      return false;
+    });
+
+    res.status(200).json({
+      success: true,
+      count: accomplishedUsers.length,
+      users: accomplishedUsers
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
