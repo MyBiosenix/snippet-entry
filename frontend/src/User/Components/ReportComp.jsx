@@ -29,35 +29,120 @@ function ReportComp() {
 }, [userId]);
 
 
-  function highlightErrors(original, userText, evalResult = {}) {
-  if (!original || !userText) return <span>No text available</span>;
+ function highlightErrors(original = "", userText = "") {
 
-  // Extract the evaluator’s word-level info (if you include it in backend response)
-  const { capitalSmall = 0, punctuation = 0, missingExtraWord = 0, spelling = 0 } = evalResult;
+  const normalize = (s = "") =>
+    s.normalize("NFKC")
+      .replace(/\u2026/g, "...") 
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\u2013|\u2014/g, "-")
+      .replace(/\u00A0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-  // Basic safe tokenization
-  const origWords = original.split(/\s+/).filter(Boolean);
-  const userWords = userText.split(/\s+/).filter(Boolean);
+  original = normalize(original);
+  userText = normalize(userText);
 
-  // Simple 1-to-1 display (we rely on backend evaluation, not frontend guessing)
+  const strip = (s) => s.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+
+  const oWords = original.split(/\s+/);
+  const uWords = userText.split(/\s+/);
+
+  const oNorm = oWords.map(strip);
+  const uNorm = uWords.map(strip);
+
+  const m = oNorm.length;
+  const n = uNorm.length;
+
+  // LCS matrix
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (oNorm[i - 1] === uNorm[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
+      else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+
+  // Backtrack
+  let i = m, j = n;
+  const align = [];
+
+  while (i > 0 && j > 0) {
+    if (oNorm[i - 1] === uNorm[j - 1]) {
+      align.unshift({ ow: oWords[i - 1], uw: uWords[j - 1] });
+      i--; j--;
+    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+      align.unshift({ ow: oWords[i - 1], uw: null });
+      i--;
+    } else {
+      align.unshift({ ow: null, uw: uWords[j - 1] });
+      j--;
+    }
+  }
+
+  while (i > 0) align.unshift({ ow: oWords[i - 1], uw: null }), i--;
+  while (j > 0) align.unshift({ ow: null, uw: uWords[j - 1] }), j--;
+
+  const stripPunct = (s) => s.replace(/[^\p{L}\p{N}]/gu, "");
+  const getPunct = (s) => s.replace(/[\p{L}\p{N}]/gu, "");
+
+  // BUILD JSX
   const result = [];
 
-  userWords.forEach((word, idx) => {
-    let className = "";
+  for (let k = 0; k < align.length; k++) {
+    const { ow, uw } = align[k];
 
-    // Apply highlights **only if** evaluator actually detected that kind of mistake
-    if (spelling > 0 && word.includes("*")) className = "error-red";
-    else if (capitalSmall > 0 && /^[A-Z]/.test(word)) className = "error-orange";
-    else if (punctuation > 0 && /[,.!?;:'"()]/.test(word)) className = "error-blue";
-    else if (missingExtraWord > 0) className = "error-red";
-    else className = "";
+    // ---------------- Missing word ----------------
+    if (ow && !uw) {
+      result.push(
+        <span key={k} className="error-red" data-tip="Missing word">
+          ({ow}){" "}
+        </span>
+      );
+      continue;
+    }
 
-    result.push(
-      <span key={idx} className={className}>
-        {word}{" "}
-      </span>
-    );
-  });
+    // ---------------- Extra word ----------------
+    if (!ow && uw) {
+      result.push(
+        <span key={k} className="error-orange" data-tip="Extra word">
+          {uw}{" "}
+        </span>
+      );
+      continue;
+    }
+
+    // Both exist → spelling or punctuation or correct
+    const baseO = stripPunct(ow).toLowerCase();
+    const baseU = stripPunct(uw).toLowerCase();
+
+    // ---------------- Spelling mistake ----------------
+    if (baseO !== baseU) {
+      result.push(
+        <span key={k} className="error-red" data-tip="Spelling mistake">
+          {uw}{" "}
+        </span>
+      );
+      continue;
+    }
+
+    // ---------------- Punctuation difference ----------------
+    const pO = getPunct(ow);
+    const pU = getPunct(uw);
+
+    if (pO !== pU) {
+      result.push(
+        <span key={k} className="error-blue" data-tip="Punctuation differs">
+          {uw}{" "}
+        </span>
+      );
+      continue;
+    }
+
+    // ---------------- Correct word ----------------
+    result.push(<span key={k}>{uw} </span>);
+  }
 
   return result;
 }
@@ -164,7 +249,6 @@ function ReportComp() {
 
   sheet.addRow([]);
 
-  // Total Row
   const totalRow = sheet.addRow([
     "TOTAL % ERROR", "", "", "", "", totalErrorSum.toFixed(2)
   ]);
@@ -236,7 +320,12 @@ function ReportComp() {
 
             <div className="snippet-box user">
               <h4>Your Submitted Work</h4>
-              <p>{highlightErrors(results[selectedIndex].snippetId?.content, results[selectedIndex].userText)}</p>
+              <div className="highlighted-text">
+                {highlightErrors(
+                  results[selectedIndex].snippetId?.content,
+                  results[selectedIndex].userText
+                )}
+              </div>
             </div>
           </div>
 

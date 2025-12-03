@@ -1,21 +1,19 @@
-// server/utils/evaluateSnippet.js
+
 const { diffWordsWithSpace } = require("diff");
 
-// --- Normalization (quotes, dashes, ellipsis, etc.)
 function normalizeText(s = "") {
   return String(s || "")
     .normalize("NFKC")
-    .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, "") // invisible chars
-    .replace(/[“”]/g, '"') // curly double → straight
-    .replace(/[‘’]/g, "'") // curly single → straight
-    .replace(/[–—]/g, "-") // long dash → hyphen
-    .replace(/…/g, "...") // ellipsis
-    .replace(/\u00A0/g, " ") // non-breaking space → normal space
-    .replace(/\s+/g, " ") // collapse spaces
+    .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, "") 
+    .replace(/[“”]/g, '"') 
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—]/g, "-") 
+    .replace(/…/g, "...") 
+    .replace(/\u00A0/g, " ") 
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-// --- Simple Levenshtein distance for spelling detection
 function levenshtein(a = "", b = "") {
   const n = a.length, m = b.length;
   if (n === 0) return m;
@@ -138,7 +136,6 @@ function evaluateSnippet(original = "", userInput = "", opts = { debug: false })
     }
   }
 
-  // --- Weighted error calculation ---
   const capitalWeight = 0.7;
   const punctuationWeight = 0.9;
   const missingExtraWeight = 1.0;

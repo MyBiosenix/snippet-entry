@@ -170,74 +170,125 @@ function ResultComp() {
     }
   };
 
-  function highlightErrors(original, userText) {
-    if (!original || !userText) {
-      return <span className="no-text">No text available to compare.</span>;
+  function highlightErrors(original = "", userText = "") {
+
+  const normalize = (s = "") =>
+    s.normalize("NFKC")
+      .replace(/\u2026/g, "...") 
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\u2013|\u2014/g, "-")
+      .replace(/\u00A0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  original = normalize(original);
+  userText = normalize(userText);
+
+  const strip = (s) => s.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+
+  const oWords = original.split(/\s+/);
+  const uWords = userText.split(/\s+/);
+
+  const oNorm = oWords.map(strip);
+  const uNorm = uWords.map(strip);
+
+  const m = oNorm.length;
+  const n = uNorm.length;
+
+  // LCS matrix
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (oNorm[i - 1] === uNorm[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
+      else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
     }
-
-    const origWords = original.split(/\s+/).filter(Boolean);
-    const userWords = userText.split(/\s+/).filter(Boolean);
-    const stripPunct = s => s.replace(/[^A-Za-z0-9]/g, "");
-
-    function lcsIndices(a, b) {
-      const n = a.length, m = b.length;
-      const dp = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));
-      for (let i = 1; i <= n; i++) {
-        for (let j = 1; j <= m; j++) {
-          if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
-          else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-        }
-      }
-      let i = n, j = m, pairs = [];
-      while (i > 0 && j > 0) {
-        if (a[i - 1] === b[j - 1]) {
-          pairs.unshift([i - 1, j - 1]);
-          i--; j--;
-        } else if (dp[i - 1][j] >= dp[i][j - 1]) i--;
-        else j--;
-      }
-      return pairs;
-    }
-
-    const origNorm = origWords.map(w => stripPunct(w).toLowerCase());
-    const userNorm = userWords.map(w => stripPunct(w).toLowerCase());
-    const matchedPairs = lcsIndices(origNorm, userNorm);
-
-    let res = [];
-    let oPrev = -1, uPrev = -1;
-
-    for (let k = 0; k <= matchedPairs.length; k++) {
-      const [oNext, uNext] = matchedPairs[k] || [origWords.length, userWords.length];
-      const origSeg = origWords.slice(oPrev + 1, oNext);
-      const userSeg = userWords.slice(uPrev + 1, uNext);
-
-      for (let uw of userSeg) {
-        res.push(<span key={"extra-" + res.length} className="error-red">{uw} </span>);
-      }
-      for (let ow of origSeg.slice(userSeg.length)) {
-        res.push(<span key={"miss-" + res.length} className="error-red">(missing:{ow}) </span>);
-      }
-
-      if (oNext < origWords.length && uNext < userWords.length) {
-        const ow = origWords[oNext];
-        const uw = userWords[uNext];
-        if (ow === uw) {
-          res.push(<span key={"ok-" + res.length}>{uw} </span>);
-        } else if (ow.toLowerCase() === uw.toLowerCase()) {
-          res.push(<span key={"cap-" + res.length} className="error-orange">{uw} </span>);
-        } else if (stripPunct(ow).toLowerCase() === stripPunct(uw).toLowerCase()) {
-          res.push(<span key={"punc-" + res.length} className="error-blue">{uw} </span>);
-        } else {
-          res.push(<span key={"spell-" + res.length} className="error-red">{uw} </span>);
-        }
-      }
-
-      oPrev = oNext;
-      uPrev = uNext;
-    }
-
-    return res;
   }
+
+  // Backtrack
+  let i = m, j = n;
+  const align = [];
+
+  while (i > 0 && j > 0) {
+    if (oNorm[i - 1] === uNorm[j - 1]) {
+      align.unshift({ ow: oWords[i - 1], uw: uWords[j - 1] });
+      i--; j--;
+    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+      align.unshift({ ow: oWords[i - 1], uw: null });
+      i--;
+    } else {
+      align.unshift({ ow: null, uw: uWords[j - 1] });
+      j--;
+    }
+  }
+
+  while (i > 0) align.unshift({ ow: oWords[i - 1], uw: null }), i--;
+  while (j > 0) align.unshift({ ow: null, uw: uWords[j - 1] }), j--;
+
+  const stripPunct = (s) => s.replace(/[^\p{L}\p{N}]/gu, "");
+  const getPunct = (s) => s.replace(/[\p{L}\p{N}]/gu, "");
+
+  // BUILD JSX
+  const result = [];
+
+  for (let k = 0; k < align.length; k++) {
+    const { ow, uw } = align[k];
+
+    // ---------------- Missing word ----------------
+    if (ow && !uw) {
+      result.push(
+        <span key={k} className="error-red" data-tip="Missing word">
+          ({ow}){" "}
+        </span>
+      );
+      continue;
+    }
+
+    // ---------------- Extra word ----------------
+    if (!ow && uw) {
+      result.push(
+        <span key={k} className="error-orange" data-tip="Extra word">
+          {uw}{" "}
+        </span>
+      );
+      continue;
+    }
+
+    // Both exist → spelling or punctuation or correct
+    const baseO = stripPunct(ow).toLowerCase();
+    const baseU = stripPunct(uw).toLowerCase();
+
+    // ---------------- Spelling mistake ----------------
+    if (baseO !== baseU) {
+      result.push(
+        <span key={k} className="error-red" data-tip="Spelling mistake">
+          {uw}{" "}
+        </span>
+      );
+      continue;
+    }
+
+    // ---------------- Punctuation difference ----------------
+    const pO = getPunct(ow);
+    const pU = getPunct(uw);
+
+    if (pO !== pU) {
+      result.push(
+        <span key={k} className="error-blue" data-tip="Punctuation differs">
+          {uw}{" "}
+        </span>
+      );
+      continue;
+    }
+
+    // ---------------- Correct word ----------------
+    result.push(<span key={k}>{uw} </span>);
+  }
+
+  return result;
+}
+
+
 
   return (
     <div className="result-page">

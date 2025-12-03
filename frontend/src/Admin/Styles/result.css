@@ -366,6 +366,21 @@
 .scrollable-text::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+.error-red {
+  color: #ff2b2b;
+  font-weight: 600;
+}
+
+.error-blue {
+  color: #0066ff;
+  font-weight: 600;
+}
+
+.error-orange {
+  color: #ff8c00;
+  font-weight: 600;
+}
+
 
 /* ==== Responsive ==== */
 @media (max-width: 900px) {
