@@ -380,6 +380,26 @@
   color: #ff8c00;
   font-weight: 600;
 }
+.error-list li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+.color-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* MATCHING your highlight colors */
+.color-red { background: #ff3b3b; }  
+.color-orange { background: #ffa500; }  
+.color-blue { background: #0070ff; }   
+.color-yellow { background: #facc15; }  
 
 
 /* ==== Responsive ==== */

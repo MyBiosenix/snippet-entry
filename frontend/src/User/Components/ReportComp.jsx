@@ -332,11 +332,25 @@ function ReportComp() {
           <div className="error-summary">
             <h4>Errors Summary</h4>
             <ul>
-              <li>Capital/Small: {results[selectedIndex].capitalSmall}</li>
-              <li>Punctuation: {results[selectedIndex].punctuation}</li>
-              <li>Missing/Extra Word: {results[selectedIndex].missingExtraWord}</li>
-              <li>Spelling: {results[selectedIndex].spelling}</li>
-              <li><b>Total % Error: {results[selectedIndex].totalErrorPercentage?.toFixed(2)}%</b></li>
+              <li>
+                <span className="color-box color-yellow"></span>
+                Capital/Small: {results[selectedIndex].capitalSmall}
+              </li>
+              <li>
+                <span className="color-box color-blue"></span>
+                Punctuation: {results[selectedIndex].punctuation}
+              </li>
+              <li>
+                <span className="color-box color-red"></span>
+                Missing/Extra Word: {results[selectedIndex].missingExtraWord}
+              </li>
+              <li>
+                <span className="color-box color-orange"></span>
+                Spelling: {results[selectedIndex].spelling}
+              </li>
+              <li>
+                <b>Total % Error: {results[selectedIndex].totalErrorPercentage?.toFixed(2)}%</b>
+              </li>
             </ul>
           </div>
         </div>

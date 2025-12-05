@@ -11,6 +11,8 @@ function MuComp() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc");
   const itemsPerPage = 10;
   
   const admin = JSON.parse(localStorage.getItem('admin'));
@@ -57,6 +59,16 @@ function MuComp() {
       }
     }
   };
+  const sortUsers = (data) => {
+    if (sortField === "expiry") {
+      return [...data].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      });
+    }
+    return data;
+  };
 
   const filteredUsers = users.filter(
     (u) =>
@@ -66,7 +78,8 @@ function MuComp() {
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+  const sortedUsers = sortUsers(filteredUsers);
+  const currentItems = sortedUsers.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
   const goToPage = (page) => {
@@ -137,10 +150,21 @@ function MuComp() {
         </div>
 
         <div className='go'>
-          <div className='mygo'>
-            <p onClick={exportToExcel} style={{ cursor: 'pointer' }}>Excel</p>
-            <p onClick={exportToPDF} style={{ cursor: 'pointer' }}>PDF</p>
+          <div className="mygo">
+            <p onClick={exportToExcel}>Excel</p>
+            <p onClick={exportToPDF}>PDF</p>
           </div>
+          <p 
+              style={{ cursor: "pointer", background:'#2575fc', color:'White', padding: '10px 20px', borderRadius:'10px' }}
+              onClick={() => {
+                setSortField("expiry");
+                setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                setCurrentPage(1);
+              }}
+            >
+              Expiry: {sortOrder === "asc" ? "↑" : "↓"}
+            </p>
+
           <input
             type='text'
             className='search'
@@ -162,6 +186,7 @@ function MuComp() {
               <th>Email Id</th>
               <th>Password</th>
               <th>Status</th>
+              <th>Goal Status</th>  
               <th>Expiry Date</th>
               <th>Action</th>
             </tr>
@@ -181,6 +206,9 @@ function MuComp() {
                     ) : (
                       <span style={{ color: 'red', fontWeight: 'bold' }}>Inactive</span>
                     )}
+                  </td>
+                  <td>{u.currentIndex}/{
+                    u.packages.name === "Gold" ? 100 :(u.packages.name === "VIP" || u.packages.name === "Diamond") ? 200:"-"}
                   </td>
                   <td>{new Date(u.date).toLocaleDateString()}</td>
                   <td className='mybtnnns'>

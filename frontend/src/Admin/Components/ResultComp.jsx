@@ -247,28 +247,25 @@ function ResultComp() {
     // ---------------- Extra word ----------------
     if (!ow && uw) {
       result.push(
-        <span key={k} className="error-orange" data-tip="Extra word">
+        <span key={k} className="error-red" data-tip="Extra word">
           {uw}{" "}
         </span>
       );
       continue;
     }
 
-    // Both exist → spelling or punctuation or correct
     const baseO = stripPunct(ow).toLowerCase();
     const baseU = stripPunct(uw).toLowerCase();
 
-    // ---------------- Spelling mistake ----------------
     if (baseO !== baseU) {
       result.push(
-        <span key={k} className="error-red" data-tip="Spelling mistake">
+        <span key={k} className="error-orange" data-tip="Spelling mistake">
           {uw}{" "}
         </span>
       );
       continue;
     }
 
-    // ---------------- Punctuation difference ----------------
     const pO = getPunct(ow);
     const pU = getPunct(uw);
 
@@ -281,7 +278,6 @@ function ResultComp() {
       continue;
     }
 
-    // ---------------- Correct word ----------------
     result.push(<span key={k}>{uw} </span>);
   }
 
@@ -429,14 +425,31 @@ function ResultComp() {
 
                   <h4 className="error-heading">Errors</h4>
                   <ul className="error-list">
-                    <li>Capital/Small: {selected.capitalSmall}</li>
-                    <li>Punctuation: {selected.punctuation}</li>
-                    <li>Missing/Extra Word: {selected.missingExtraWord}</li>
-                    <li>Spelling: {selected.spelling}</li>
                     <li>
+                      <span className="color-box color-yellow"></span>
+                      Capital/Small: {selected.capitalSmall}
+                    </li>
+
+                    <li>
+                      <span className="color-box color-blue"></span>
+                      Punctuation: {selected.punctuation}
+                    </li>
+
+                    <li>
+                      <span className="color-box color-red"></span>
+                      Missing/Extra Word: {selected.missingExtraWord}
+                    </li>
+
+                    <li>
+                      <span className="color-box color-orange"></span>
+                      Spelling: {selected.spelling}
+                    </li>
+
+                    <li style={{ marginTop: "10px" }}>
                       <b>Total % Error:</b> {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
                     </li>
                   </ul>
+
                 </>
               )}
             </>
