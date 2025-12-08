@@ -21,7 +21,7 @@ function Work() {
       if (data.done) {
         setIsCompleted(true);
         setSnippet({
-          title: "🎉 All Snippets Completed!",
+          title: "Work Completed!",
           content: "You have finished all typing practice sessions!",
         });
         setSnippetNumber(null);
@@ -106,7 +106,7 @@ function Work() {
               <textarea
                 className="input"
                 placeholder={
-                  isCompleted ? "✅ All snippets completed!" : "Start typing here..."
+                  isCompleted ? "✅ Work completed!" : "Start typing here..."
                 }
                 value={userText}
                 onChange={(e) => setUserText(e.target.value)}
