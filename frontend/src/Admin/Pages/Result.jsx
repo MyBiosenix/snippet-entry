@@ -6,7 +6,6 @@ import ResultComp from '../Components/ResultComp'
 function Result() {
   return (
     <div className='result'>
-        
         <ResultComp/>
     </div>
   )

@@ -333,7 +333,7 @@ function ReportComp() {
             <h4>Errors Summary</h4>
             <ul>
               <li>
-                <span className="color-box color-yellow"></span>
+                <span className="color-box color-red"></span>
                 Capital/Small: {results[selectedIndex].capitalSmall}
               </li>
               <li>
@@ -345,7 +345,7 @@ function ReportComp() {
                 Missing/Extra Word: {results[selectedIndex].missingExtraWord}
               </li>
               <li>
-                <span className="color-box color-orange"></span>
+                <span className="color-box color-red"></span>
                 Spelling: {results[selectedIndex].spelling}
               </li>
               <li>

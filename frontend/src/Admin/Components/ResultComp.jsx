@@ -196,7 +196,6 @@ function ResultComp() {
   const m = oNorm.length;
   const n = uNorm.length;
 
-  // LCS matrix
   const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
@@ -205,7 +204,6 @@ function ResultComp() {
     }
   }
 
-  // Backtrack
   let i = m, j = n;
   const align = [];
 
@@ -228,13 +226,11 @@ function ResultComp() {
   const stripPunct = (s) => s.replace(/[^\p{L}\p{N}]/gu, "");
   const getPunct = (s) => s.replace(/[\p{L}\p{N}]/gu, "");
 
-  // BUILD JSX
   const result = [];
 
   for (let k = 0; k < align.length; k++) {
     const { ow, uw } = align[k];
 
-    // ---------------- Missing word ----------------
     if (ow && !uw) {
       result.push(
         <span key={k} className="error-red" data-tip="Missing word">
@@ -244,7 +240,6 @@ function ResultComp() {
       continue;
     }
 
-    // ---------------- Extra word ----------------
     if (!ow && uw) {
       result.push(
         <span key={k} className="error-red" data-tip="Extra word">
@@ -259,7 +254,7 @@ function ResultComp() {
 
     if (baseO !== baseU) {
       result.push(
-        <span key={k} className="error-orange" data-tip="Spelling mistake">
+        <span key={k} className="error-red" data-tip="Spelling mistake">
           {uw}{" "}
         </span>
       );
@@ -426,7 +421,7 @@ function ResultComp() {
                   <h4 className="error-heading">Errors</h4>
                   <ul className="error-list">
                     <li>
-                      <span className="color-box color-yellow"></span>
+                      <span className="color-box color-red"></span>
                       Capital/Small: {selected.capitalSmall}
                     </li>
 
@@ -441,7 +436,7 @@ function ResultComp() {
                     </li>
 
                     <li>
-                      <span className="color-box color-orange"></span>
+                      <span className="color-box color-red"></span>
                       Spelling: {selected.spelling}
                     </li>
 
