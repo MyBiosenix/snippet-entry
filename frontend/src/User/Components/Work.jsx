@@ -22,7 +22,7 @@ function Work() {
         setIsCompleted(true);
         setSnippet({
           title: "Work Completed!",
-          content: "You have finished all typing practice sessions!",
+          content: "Work Completed!",
         });
         setSnippetNumber(null);
         return;
