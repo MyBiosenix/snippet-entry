@@ -5,9 +5,9 @@ const jwt = require('jsonwebtoken');
 
 exports.login = async (req, res) => {
   try {
-    const { email, password, forceLogin } = req.body; // <--- added forceLogin flag
+    const { email, password, forceLogin } = req.body;
 
-    const myuser = await User.findOne({ email });
+    const myuser = await User.findOne({ email }).populate('packages','name');
     if (!myuser) return res.status(400).json({ message: 'User Does Not Exist' });
 
     if (password !== myuser.password)
@@ -31,7 +31,7 @@ exports.login = async (req, res) => {
     res.status(200).json({
       message: 'Login Successful',
       token,
-      user: { id: myuser._id, name: myuser.name, email: myuser.email, isActive: myuser.isActive }
+      user: { id: myuser._id, name: myuser.name, email: myuser.email, mobile: myuser.mobile,package: myuser.packages?.name, isActive: myuser.isActive }
     });
 
   } catch (err) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../Styles/result.css';
 
@@ -7,6 +7,10 @@ function ResultComp() {
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [visibleTotal, setVisibleTotal] = useState(0);
+
+  // ✅ SORT STATE
+  const [sortOrder, setSortOrder] = useState("default"); // default | asc | desc
+
   const [editValues, setEditValues] = useState({
     capitalSmall: 0,
     punctuation: 0,
@@ -25,29 +29,28 @@ function ResultComp() {
     fetch(`https://api.freelancing-project.com/api/snippet/results/${userId}`)
       .then(res => res.json())
       .then(data => {
-        const cleaned = data.map(r => {
-        let content = r.snippetId?.content || "";
-        let userText = r.userText || "";
+        const cleaned = data.map((r, index) => {
+          let content = r.snippetId?.content || "";
+          let userText = r.userText || "";
 
-        content = content
-          .replace(/\n{2,}/g, "\n\n")
-          .replace(/([^\n])\n([^\n])/g, "$1 $2");
+          content = content
+            .replace(/\n{2,}/g, "\n\n")
+            .replace(/([^\n])\n([^\n])/g, "$1 $2");
 
-        userText = userText.replace(/\n+/g, "\n");
+          userText = userText.replace(/\n+/g, "\n");
 
-        return {
-          ...r,
-          snippetId: { ...r.snippetId, content },
-          userText,
-        };
-      });
+          return {
+            ...r,
+            pageNumber: index + 1, // ✅ ORIGINAL PAGE NUMBER FIXED
+            snippetId: { ...r.snippetId, content },
+            userText,
+          };
+        });
 
-      setResults(cleaned);
-    })
-
+        setResults(cleaned);
+      })
       .catch(err => console.error(err));
   }, [userId]);
-
 
   useEffect(() => {
     const total = results
@@ -56,11 +59,23 @@ function ResultComp() {
     setVisibleTotal(total);
   }, [results]);
 
+  // ✅ SORTED RESULTS (PAGE NUMBER UNCHANGED)
+  const sortedResults = useMemo(() => {
+    if (sortOrder === "default") return results;
+
+    return [...results].sort((a, b) => {
+      const aErr = Number(a.totalErrorPercentage || 0);
+      const bErr = Number(b.totalErrorPercentage || 0);
+      return sortOrder === "asc" ? aErr - bErr : bErr - aErr;
+    });
+  }, [results, sortOrder]);
+
   const handleToggleVisibility = async (errorId) => {
     try {
-      const res = await fetch(`https://api.freelancing-project.com/api/snippet/toggle/${userId}/${errorId}`, {
-        method: "PATCH",
-      });
+      const res = await fetch(
+        `https://api.freelancing-project.com/api/snippet/toggle/${userId}/${errorId}`,
+        { method: "PATCH" }
+      );
       const data = await res.json();
 
       if (res.ok) {
@@ -69,11 +84,9 @@ function ResultComp() {
             r._id === errorId ? { ...r, visibleToUser: data.visibleToUser } : r
           )
         );
-        if (selected && selected._id === errorId) {
+        if (selected?._id === errorId) {
           setSelected(prev => ({ ...prev, visibleToUser: data.visibleToUser }));
         }
-      } else {
-        alert(data.message);
       }
     } catch (err) {
       console.error(err);
@@ -103,18 +116,18 @@ function ResultComp() {
   };
 
   const calculateTotal = (vals) => {
-    const cs = Number(vals.capitalSmall || 0);
-    const p = Number(vals.punctuation || 0);
-    const mw = Number(vals.missingExtraWord || 0);
-    const s = Number(vals.spelling || 0);
-    return (cs * 0.9) + (p * 0.7) + (mw * 1) + (s * 1);
+    return (
+      Number(vals.capitalSmall || 0) * 0.9 +
+      Number(vals.punctuation || 0) * 0.7 +
+      Number(vals.missingExtraWord || 0) +
+      Number(vals.spelling || 0)
+    );
   };
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     const newVals = { ...editValues, [name]: Number(value) };
-    const newTotal = calculateTotal(newVals);
-    newVals.totalErrorPercentage = newTotal;
+    newVals.totalErrorPercentage = calculateTotal(newVals);
     setEditValues(newVals);
   };
 
@@ -128,34 +141,26 @@ function ResultComp() {
 
   const handleSaveEdits = async () => {
     if (!selected) return;
-    const errorId = selected._id;
 
-    const payload = {
-      capitalSmall: editValues.capitalSmall,
-      punctuation: editValues.punctuation,
-      missingExtraWord: editValues.missingExtraWord,
-      spelling: editValues.spelling,
-      totalErrorPercentage: editValues.totalErrorPercentage,
-    };
-
-    try {        
-      const res = await fetch(`https://api.freelancing-project.com/api/snippet/update/${userId}/${errorId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    try {
+      const res = await fetch(
+        `https://api.freelancing-project.com/api/snippet/update/${userId}/${selected._id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editValues),
+        }
+      );
       const data = await res.json();
-      if (!res.ok) {
-        alert(data.message || "Failed to update");
-        return;
-      }
+      if (!res.ok) return alert(data.message || "Failed");
 
       setResults(prev =>
         prev.map(r =>
-          r._id === errorId ? { ...r, ...data.updated } : r
+          r._id === selected._id ? { ...r, ...data.updated } : r
         )
       );
 
+      // 🔥 KEEP snippetId & userText SAFE
       setSelected(prev => ({
         ...prev,
         ...data.updated,
@@ -164,9 +169,9 @@ function ResultComp() {
       }));
 
       setEditMode(false);
+
     } catch (err) {
       console.error(err);
-      alert("Error saving edits, check console.");
     }
   };
 
@@ -223,8 +228,12 @@ function ResultComp() {
   while (i > 0) align.unshift({ ow: oWords[i - 1], uw: null }), i--;
   while (j > 0) align.unshift({ ow: null, uw: uWords[j - 1] }), j--;
 
-  const stripPunct = (s) => s.replace(/[^\p{L}\p{N}]/gu, "");
-  const getPunct = (s) => s.replace(/[\p{L}\p{N}]/gu, "");
+  const stripPunct = (s = "") =>
+  typeof s === "string" ? s.replace(/[^\p{L}\p{N}]/gu, "") : "";
+
+  const getPunct = (s = "") =>
+  typeof s === "string" ? s.replace(/[\p{L}\p{N}]/gu, "") : "";
+
 
   const result = [];
 
@@ -279,14 +288,12 @@ function ResultComp() {
   return result;
 }
 
-
-
   return (
     <div className="result-page">
       <div className="user-info">
         <p><b>Name:</b> {user?.name}</p>
         <p><b>Email:</b> {user?.email}</p>
-        <p><b>Package:</b> {JSON.stringify(user?.packages?.name)}</p>
+        <p><b>Package:</b> {user?.packages?.name}</p>
         <p><b>Mobile:</b> {user?.mobile}</p>
       </div>
 
@@ -297,36 +304,40 @@ function ResultComp() {
           <h3 className="visible-total">
             Total Error (Visible Pages): {visibleTotal.toFixed(2)}%
           </h3>
-          <div className="sidebar-scroll">
-          {results.map((r, idx) => (
-            <div key={r._id || idx} className="snippet-item-wrapper">
-              <p
-                className={`snippet-item ${selected?._id === r._id ? "active" : ""}`}
-                onClick={() => handleSnippetClick(r)}
-              >
-                Page {idx + 1} – {
-                  r.userText?.trim().length === 0 || Number(r.totalErrorPercentage) > 150
-                    ? `${Number(r.totalErrorPercentage || 0).toFixed(2)}% Invalid❗`
-                    : `${Number(r.totalErrorPercentage || 0).toFixed(2)}%`
-                }
-              </p>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                <button
-                  className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
-                  onClick={() => handleToggleVisibility(r._id)}
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            style={{ width: "100%", padding: "6px", margin: "10px 0", background:'blue', borderRadius: '5px' }}
+          >
+            <option value="default">Default Page Order</option>
+            <option value="desc">Highest → Lowest Error</option>
+            <option value="asc">Lowest → Highest Error</option>
+          </select>
+
+          <div className="sidebar-scroll">
+            {sortedResults.map((r) => (
+              <div key={r._id} className="snippet-item-wrapper">
+                <p
+                  className={`snippet-item ${selected?._id === r._id ? "active" : ""}`}
+                  onClick={() => handleSnippetClick(r)}
                 >
-                  {r.visibleToUser ? "Visible ✅" : "Hidden ❌"}
-                </button>
-                <button
-                  className="edit-btn"
-                  onClick={() => handleEditClick(r)}
-                >
-                  Edit ✏️
-                </button>
+                  Page {r.pageNumber} – {Number(r.totalErrorPercentage || 0).toFixed(2)}%
+                </p>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                  <button
+                    className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
+                    onClick={() => handleToggleVisibility(r._id)}
+                  >
+                    {r.visibleToUser ? "Visible ✅" : "Hidden ❌"}
+                  </button>
+                  <button className="edit-btn" onClick={() => handleEditClick(r)}>
+                    Edit ✏️
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
           </div>
         </div>
 

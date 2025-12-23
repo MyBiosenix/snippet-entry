@@ -12,21 +12,37 @@ function ReportComp() {
   const [results, setResults] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [packages, setPackages] = useState('');
+  const [mobile, setMobile] = useState('');
+
 
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
 
   useEffect(() => {
-  if (!userId) return;
+    if (!userId) return;
 
-  fetch(`https://api.freelancing-project.com/api/snippet/user-visible/${userId}`)
-    .then(res => res.json())
-    .then(data => {
-      console.log("Fetched data:", data); // 👈 check this in console
-      setResults(data);
-    })
-    .catch(err => console.error(err));
-}, [userId]);
+    fetch(`https://api.freelancing-project.com/api/snippet/user-visible/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        console.log("Fetched data:", data); 
+        setResults(data);
+      })
+      .catch(err => console.error(err));
+  }, [userId]);
+
+  useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem('user'));
+    console.log(userData.name);
+    if(userData && userData.name){
+      setUsername(userData.name);
+      setEmail(userData.email);
+      setMobile(userData.mobile);
+      setPackages(userData.package);
+    }
+  })
 
 
  function highlightErrors(original = "", userText = "") {
@@ -55,7 +71,6 @@ function ReportComp() {
   const m = oNorm.length;
   const n = uNorm.length;
 
-  // LCS matrix
   const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
@@ -64,7 +79,6 @@ function ReportComp() {
     }
   }
 
-  // Backtrack
   let i = m, j = n;
   const align = [];
 
@@ -87,13 +101,11 @@ function ReportComp() {
   const stripPunct = (s) => s.replace(/[^\p{L}\p{N}]/gu, "");
   const getPunct = (s) => s.replace(/[\p{L}\p{N}]/gu, "");
 
-  // BUILD JSX
   const result = [];
 
   for (let k = 0; k < align.length; k++) {
     const { ow, uw } = align[k];
 
-    // ---------------- Missing word ----------------
     if (ow && !uw) {
       result.push(
         <span key={k} className="error-red" data-tip="Missing word">
@@ -103,7 +115,6 @@ function ReportComp() {
       continue;
     }
 
-    // ---------------- Extra word ----------------
     if (!ow && uw) {
       result.push(
         <span key={k} className="error-orange" data-tip="Extra word">
@@ -113,11 +124,9 @@ function ReportComp() {
       continue;
     }
 
-    // Both exist → spelling or punctuation or correct
     const baseO = stripPunct(ow).toLowerCase();
     const baseU = stripPunct(uw).toLowerCase();
 
-    // ---------------- Spelling mistake ----------------
     if (baseO !== baseU) {
       result.push(
         <span key={k} className="error-red" data-tip="Spelling mistake">
@@ -127,7 +136,6 @@ function ReportComp() {
       continue;
     }
 
-    // ---------------- Punctuation difference ----------------
     const pO = getPunct(ow);
     const pU = getPunct(uw);
 
@@ -140,48 +148,17 @@ function ReportComp() {
       continue;
     }
 
-    // ---------------- Correct word ----------------
     result.push(<span key={k}>{uw} </span>);
   }
 
   return result;
 }
-
-
-  const generateCSV = () => {
-    if (results.length === 0) return "";
-
-    const rows = [
-      ["Page", "Capital/Small", "Punctuation", "Missing/Extra Word", "Spelling", "Total % Error"]
-    ];
-
-    let totalErrorSum = 0;
-
-    results.forEach((r, idx) => {
-      const total = r.totalErrorPercentage || 0;
-      totalErrorSum += total;
-      rows.push([
-        `Page ${idx + 1}`,
-        r.capitalSmall,
-        r.punctuation,
-        r.missingExtraWord,
-        r.spelling,
-        total.toFixed(2)
-      ]);
-    });
-
-    rows.push(["TOTAL % ERROR", "", "", "", "", "", totalErrorSum.toFixed(2)]);
-
-    return "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-  };
-
  const handleConfirmDownload = async () => {
   if (!results || results.length === 0) return;
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Typing Report");
 
-  // Title
   sheet.mergeCells("A1:F1");
   const title = sheet.getCell("A1");
   title.value = "DATA CONVERSION REPORT";
@@ -287,6 +264,12 @@ function ReportComp() {
   return (
     <div className="report-page">
       <p className='back' onClick={()=>navigate('/home')}>Back</p>
+      <div className='userdets'>
+        <p><b>Name:</b>{username} </p>
+        <p><b>Email:</b>{email} </p>
+        <p><b>Package:</b>{packages} </p>
+        <p><b>Mobile:</b>{mobile} </p>
+      </div>
       <h2 className="report-title">Data Conversion Reports</h2>
 
       {results.length > 0 && (
@@ -378,7 +361,7 @@ function ReportComp() {
           <tbody>
             {results.map((r, idx) => (
               <tr key={r._id}>
-                <td>Page {results[selectedIndex].pageNumber}</td>
+                <td>Page {r.pageNumber}</td>
                 <td>{r.capitalSmall}</td>
                 <td>{r.punctuation}</td>
                 <td>{r.missingExtraWord}</td>
