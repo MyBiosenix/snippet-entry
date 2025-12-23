@@ -159,8 +159,7 @@ function ResultComp() {
           r._id === selected._id ? { ...r, ...data.updated } : r
         )
       );
-
-      // 🔥 KEEP snippetId & userText SAFE
+      
       setSelected(prev => ({
         ...prev,
         ...data.updated,
