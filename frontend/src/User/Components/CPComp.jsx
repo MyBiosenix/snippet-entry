@@ -54,9 +54,9 @@ function CPComp() {
         <h4>Enter Basic Details</h4>
         <div className="form">
 
-          <input type="text" placeholder="Enter Password*" value={password} required onChange={(e) => setPassword(e.target.value)}/>
+          <input type="text" placeholder="Enter Current Password*" value={password} required onChange={(e) => setPassword(e.target.value)}/>
 
-          <input type="text" placeholder="Confirm Password" value={newPass} required onChange={(e) => setNewPass(e.target.value)}/>
+          <input type="text" placeholder="Enter New Password" value={newPass} required onChange={(e) => setNewPass(e.target.value)}/>
              {newpassError && <p className="error">{newpassError}</p>}
         </div>
         <div className="bttns">

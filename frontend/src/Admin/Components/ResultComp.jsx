@@ -59,7 +59,6 @@ function ResultComp() {
     setVisibleTotal(total);
   }, [results]);
 
-  // ✅ SORTED RESULTS (PAGE NUMBER UNCHANGED)
   const sortedResults = useMemo(() => {
     if (sortOrder === "default") return results;
 

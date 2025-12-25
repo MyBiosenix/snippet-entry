@@ -1,4 +1,3 @@
-
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const User = require('../models/User');
