@@ -18,6 +18,18 @@ function Header() {
             setSubAdminRole(subAdminData.role);
         } 
     })
+
+    const handleLogout = async() => {
+        const confirmLogout = window.confirm('Do You Really want to Logout?');
+
+        if(confirmLogout){
+            localStorage.removeItem('subadmin');
+            localStorage.removeItem('token');
+            localStorage.removeItem('subadminId');
+
+            navigate('/sub-admin/login');
+        }
+    }
   return (
     <div>
         <div className='myheader'>
@@ -41,7 +53,7 @@ function Header() {
             <p className='myp' onClick={()=>navigate('/sub-admin/active-users')}><FaUserCheck className='sidebar-icon'/>Active Users</p>
             <p className='myp' onClick={()=>navigate('/sub-admin/inactive-users')}><FaUserTimes className='sidebar-icon'/>Deactivated Users</p>
 
-            <h5 className='lop'><FaSignOutAlt className='signout-icon'/>Logout</h5>
+            <h5 className='lop' onClick={handleLogout}><FaSignOutAlt className='signout-icon'/>Logout</h5>
         </div>
 
         {open && <div className="overlay" onClick={() => setOpen(false)}></div>}
