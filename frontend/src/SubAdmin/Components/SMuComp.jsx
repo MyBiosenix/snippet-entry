@@ -24,7 +24,7 @@ function SMuComp() {
   const fetchUsers = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5098/api/sub-admin/getusers',{
+        const res = await axios.get('https://api.freelancing-project.com/api/sub-admin/getusers',{
             headers:{
                 Authorization:`Bearer ${token}`
             }
