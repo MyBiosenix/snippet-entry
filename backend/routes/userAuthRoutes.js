@@ -35,10 +35,5 @@ router.get('/check-auth',authMiddleware,checkActiveUser,(req,res) => {
     res.json({ active: true });
 })
 
-router.put('/:id/add-to-draft',authMiddleware,addToDraft);
-
-router.put('/:id/remove-from-draft',authMiddleware,removeFromDraft);
-
-router.get('/get-drafts',authMiddleware,getDraftUsers);
 
 module.exports = router;

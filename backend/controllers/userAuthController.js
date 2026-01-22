@@ -129,40 +129,7 @@ function getRandomPassword(length = 7){
     }
     return password;
 }
-exports.addToDraft = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    await User.findByIdAndUpdate(id, { isDraft: true });
-    res.json({ message: "User moved to drafts" });
-  } catch (err) {
-    res.status(500).json({ message: "Error moving user to drafts" });
-  }
-};
-
-exports.removeFromDraft = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await User.findByIdAndUpdate(id, { isDraft: false });
-    res.json({ message: "User removed from drafts" });
-  } catch (err) {
-    res.status(500).json({ message: "Error removing user from drafts" });
-  }
-};
-
-exports.getDraftUsers = async (req, res) => {
-  try {
-    const drafts = await User.find({ isDraft: true })
-      .populate("packages", "name")
-      .populate("admin", "name")
-      .sort({ createdAt: -1 });
-
-    res.json(drafts);
-  } catch (err) {
-    res.status(500).json({ message: "Error getting draft users" });
-  }
-};
 
 exports.activateUser = async(req,res) => {
     try{
