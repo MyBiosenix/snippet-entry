@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import '../Styles/result.css';
+import React, { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
+import "../Styles/result.css";
 
 function ResultComp() {
   const [results, setResults] = useState([]);
@@ -8,7 +8,6 @@ function ResultComp() {
   const [editMode, setEditMode] = useState(false);
   const [visibleTotal, setVisibleTotal] = useState(0);
 
-  // ✅ SORT STATE
   const [sortOrder, setSortOrder] = useState("default"); // default | asc | desc
 
   const [editValues, setEditValues] = useState({
@@ -16,7 +15,7 @@ function ResultComp() {
     punctuation: 0,
     missingExtraWord: 0,
     spelling: 0,
-    totalErrorPercentage: 0
+    totalErrorPercentage: 0,
   });
 
   const location = useLocation();
@@ -26,9 +25,9 @@ function ResultComp() {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`https://api.freelancing-project.com/api/snippet/results/${userId}`)
-      .then(res => res.json())
-      .then(data => {
+    fetch(`http://localhost:5098/api/snippet/results/${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
         const cleaned = data.map((r, index) => {
           let content = r.snippetId?.content || "";
           let userText = r.userText || "";
@@ -49,12 +48,12 @@ function ResultComp() {
 
         setResults(cleaned);
       })
-      .catch(err => console.error(err));
+      .catch((err) => console.error(err));
   }, [userId]);
 
   useEffect(() => {
     const total = results
-      .filter(r => r.visibleToUser)
+      .filter((r) => r.visibleToUser)
       .reduce((sum, r) => sum + Number(r.totalErrorPercentage || 0), 0);
     setVisibleTotal(total);
   }, [results]);
@@ -72,19 +71,19 @@ function ResultComp() {
   const handleToggleVisibility = async (errorId) => {
     try {
       const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/toggle/${userId}/${errorId}`,
+        `http://localhost:5098/api/snippet/toggle/${userId}/${errorId}`,
         { method: "PATCH" }
       );
       const data = await res.json();
 
       if (res.ok) {
-        setResults(prev =>
-          prev.map(r =>
+        setResults((prev) =>
+          prev.map((r) =>
             r._id === errorId ? { ...r, visibleToUser: data.visibleToUser } : r
           )
         );
         if (selected?._id === errorId) {
-          setSelected(prev => ({ ...prev, visibleToUser: data.visibleToUser }));
+          setSelected((prev) => ({ ...prev, visibleToUser: data.visibleToUser }));
         }
       }
     } catch (err) {
@@ -133,7 +132,7 @@ function ResultComp() {
   const handleCancelEdit = () => {
     setEditMode(false);
     if (selected) {
-      const fresh = results.find(r => r._id === selected._id);
+      const fresh = results.find((r) => r._id === selected._id);
       if (fresh) setSelected(fresh);
     }
   };
@@ -143,7 +142,7 @@ function ResultComp() {
 
     try {
       const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/update/${userId}/${selected._id}`,
+        `http://localhost:5098/api/snippet/update/${userId}/${selected._id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -153,13 +152,11 @@ function ResultComp() {
       const data = await res.json();
       if (!res.ok) return alert(data.message || "Failed");
 
-      setResults(prev =>
-        prev.map(r =>
-          r._id === selected._id ? { ...r, ...data.updated } : r
-        )
+      setResults((prev) =>
+        prev.map((r) => (r._id === selected._id ? { ...r, ...data.updated } : r))
       );
-      
-      setSelected(prev => ({
+
+      setSelected((prev) => ({
         ...prev,
         ...data.updated,
         snippetId: prev.snippetId,
@@ -167,132 +164,160 @@ function ResultComp() {
       }));
 
       setEditMode(false);
-
     } catch (err) {
       console.error(err);
     }
   };
 
   function highlightErrors(original = "", userText = "") {
+    const normalize = (s = "") =>
+      s
+        .normalize("NFKC")
+        .replace(/\u2026/g, "...")
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/\u2013|\u2014/g, "-")
+        .replace(/\u00A0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 
-  const normalize = (s = "") =>
-    s.normalize("NFKC")
-      .replace(/\u2026/g, "...") 
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      .replace(/\u2013|\u2014/g, "-")
-      .replace(/\u00A0/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    original = normalize(original);
+    userText = normalize(userText);
 
-  original = normalize(original);
-  userText = normalize(userText);
+    const strip = (s) => s.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
 
-  const strip = (s) => s.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+    const oWords = original.split(/\s+/);
+    const uWords = userText.split(/\s+/);
 
-  const oWords = original.split(/\s+/);
-  const uWords = userText.split(/\s+/);
+    const oNorm = oWords.map(strip);
+    const uNorm = uWords.map(strip);
 
-  const oNorm = oWords.map(strip);
-  const uNorm = uWords.map(strip);
+    const m = oNorm.length;
+    const n = uNorm.length;
 
-  const m = oNorm.length;
-  const n = uNorm.length;
-
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (oNorm[i - 1] === uNorm[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
-      else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+    // LCS DP
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (oNorm[i - 1] === uNorm[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
+        else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
     }
+
+    let i = m,
+      j = n;
+    const align = [];
+
+    while (i > 0 && j > 0) {
+      if (oNorm[i - 1] === uNorm[j - 1]) {
+        align.unshift({ ow: oWords[i - 1], uw: uWords[j - 1] });
+        i--;
+        j--;
+      } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+        align.unshift({ ow: oWords[i - 1], uw: null });
+        i--;
+      } else {
+        align.unshift({ ow: null, uw: uWords[j - 1] });
+        j--;
+      }
+    }
+
+    while (i > 0) align.unshift({ ow: oWords[i - 1], uw: null }), i--;
+    while (j > 0) align.unshift({ ow: null, uw: uWords[j - 1] }), j--;
+
+    const stripPunct = (s = "") =>
+      typeof s === "string" ? s.replace(/[^\p{L}\p{N}]/gu, "") : "";
+
+    const getPunct = (s = "") =>
+      typeof s === "string" ? s.replace(/[\p{L}\p{N}]/gu, "") : "";
+
+    const result = [];
+
+    for (let k = 0; k < align.length; k++) {
+      const { ow, uw } = align[k];
+
+      // Missing word
+      if (ow && !uw) {
+        result.push(
+          <span key={k} className="error-red" data-tip="Missing word">
+            ({ow}){" "}
+          </span>
+        );
+        continue;
+      }
+
+      // Extra word
+      if (!ow && uw) {
+        result.push(
+          <span key={k} className="error-red" data-tip="Extra word">
+            {uw}{" "}
+          </span>
+        );
+        continue;
+      }
+
+      // Both present
+      const baseOraw = stripPunct(ow); // keep case
+      const baseUraw = stripPunct(uw);
+
+      const baseOlower = baseOraw.toLowerCase();
+      const baseUlower = baseUraw.toLowerCase();
+
+      // ✅ Capital/Small mistake (same letters ignoring case, but case differs)
+      if (baseOlower === baseUlower && baseOraw !== baseUraw) {
+        result.push(
+          <span key={k} className="error-red" data-tip="Capital/Small mistake">
+            {uw}{" "}
+          </span>
+        );
+        continue;
+      }
+
+      // ✅ Spelling mistake
+      if (baseOlower !== baseUlower) {
+        result.push(
+          <span key={k} className="error-red" data-tip="Spelling mistake">
+            {uw}{" "}
+          </span>
+        );
+        continue;
+      }
+
+      // ✅ Punctuation differs
+      const pO = getPunct(ow);
+      const pU = getPunct(uw);
+
+      if (pO !== pU) {
+        result.push(
+          <span key={k} className="error-blue" data-tip="Punctuation differs">
+            {uw}{" "}
+          </span>
+        );
+        continue;
+      }
+
+      // Correct
+      result.push(<span key={k}>{uw} </span>);
+    }
+
+    return result;
   }
-
-  let i = m, j = n;
-  const align = [];
-
-  while (i > 0 && j > 0) {
-    if (oNorm[i - 1] === uNorm[j - 1]) {
-      align.unshift({ ow: oWords[i - 1], uw: uWords[j - 1] });
-      i--; j--;
-    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
-      align.unshift({ ow: oWords[i - 1], uw: null });
-      i--;
-    } else {
-      align.unshift({ ow: null, uw: uWords[j - 1] });
-      j--;
-    }
-  }
-
-  while (i > 0) align.unshift({ ow: oWords[i - 1], uw: null }), i--;
-  while (j > 0) align.unshift({ ow: null, uw: uWords[j - 1] }), j--;
-
-  const stripPunct = (s = "") =>
-  typeof s === "string" ? s.replace(/[^\p{L}\p{N}]/gu, "") : "";
-
-  const getPunct = (s = "") =>
-  typeof s === "string" ? s.replace(/[\p{L}\p{N}]/gu, "") : "";
-
-
-  const result = [];
-
-  for (let k = 0; k < align.length; k++) {
-    const { ow, uw } = align[k];
-
-    if (ow && !uw) {
-      result.push(
-        <span key={k} className="error-red" data-tip="Missing word">
-          ({ow}){" "}
-        </span>
-      );
-      continue;
-    }
-
-    if (!ow && uw) {
-      result.push(
-        <span key={k} className="error-red" data-tip="Extra word">
-          {uw}{" "}
-        </span>
-      );
-      continue;
-    }
-
-    const baseO = stripPunct(ow).toLowerCase();
-    const baseU = stripPunct(uw).toLowerCase();
-
-    if (baseO !== baseU) {
-      result.push(
-        <span key={k} className="error-red" data-tip="Spelling mistake">
-          {uw}{" "}
-        </span>
-      );
-      continue;
-    }
-
-    const pO = getPunct(ow);
-    const pU = getPunct(uw);
-
-    if (pO !== pU) {
-      result.push(
-        <span key={k} className="error-blue" data-tip="Punctuation differs">
-          {uw}{" "}
-        </span>
-      );
-      continue;
-    }
-
-    result.push(<span key={k}>{uw} </span>);
-  }
-
-  return result;
-}
 
   return (
     <div className="result-page">
       <div className="user-info">
-        <p><b>Name:</b> {user?.name}</p>
-        <p><b>Email:</b> {user?.email}</p>
-        <p><b>Package:</b> {user?.packages?.name}</p>
-        <p><b>Mobile:</b> {user?.mobile}</p>
+        <p>
+          <b>Name:</b> {user?.name}
+        </p>
+        <p>
+          <b>Email:</b> {user?.email}
+        </p>
+        <p>
+          <b>Package:</b> {user?.packages?.name}
+        </p>
+        <p>
+          <b>Mobile:</b> {user?.mobile}
+        </p>
       </div>
 
       <h2 className="page-title">Data Conversion Results</h2>
@@ -306,7 +331,13 @@ function ResultComp() {
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
-            style={{ width: "100%", padding: "6px", margin: "10px 0", background:'blue', borderRadius: '5px' }}
+            style={{
+              width: "100%",
+              padding: "6px",
+              margin: "10px 0",
+              background: "blue",
+              borderRadius: "5px",
+            }}
           >
             <option value="default">Default Page Order</option>
             <option value="desc">Highest → Lowest Error</option>
@@ -317,13 +348,16 @@ function ResultComp() {
             {sortedResults.map((r) => (
               <div key={r._id} className="snippet-item-wrapper">
                 <p
-                  className={`snippet-item ${selected?._id === r._id ? "active" : ""}`}
+                  className={`snippet-item ${
+                    selected?._id === r._id ? "active" : ""
+                  }`}
                   onClick={() => handleSnippetClick(r)}
                 >
-                  Page {r.pageNumber} – {Number(r.totalErrorPercentage || 0).toFixed(2)}%
+                  Page {r.pageNumber} –{" "}
+                  {Number(r.totalErrorPercentage || 0).toFixed(2)}%
                 </p>
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
                   <button
                     className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
                     onClick={() => handleToggleVisibility(r._id)}
@@ -388,7 +422,8 @@ function ResultComp() {
                     </label>
 
                     <p className="edit-total">
-                      <b>Total % Error:</b> {editValues.totalErrorPercentage.toFixed(2)}%
+                      <b>Total % Error:</b>{" "}
+                      {Number(editValues.totalErrorPercentage || 0).toFixed(2)}%
                     </p>
 
                     <div className="edit-actions">
@@ -412,19 +447,19 @@ function ResultComp() {
                     <div className="text-box user-box">
                       <h4 className="snippet-title">User Text</h4>
                       <div className="scrollable-text">
-                        {(
-                          Number(selected.capitalSmall) > 0 ||
-                          Number(selected.punctuation) > 0 ||
-                          Number(selected.missingExtraWord) > 0 ||
-                          Number(selected.spelling) > 0
-                        ) ? (
-                          highlightErrors(selected.snippetId?.content, selected.userText)
+                        {Number(selected.capitalSmall) > 0 ||
+                        Number(selected.punctuation) > 0 ||
+                        Number(selected.missingExtraWord) > 0 ||
+                        Number(selected.spelling) > 0 ? (
+                          highlightErrors(
+                            selected.snippetId?.content,
+                            selected.userText
+                          )
                         ) : (
                           <span>{selected.userText}</span>
                         )}
                       </div>
                     </div>
-
                   </div>
 
                   <h4 className="error-heading">Errors</h4>
@@ -450,10 +485,10 @@ function ResultComp() {
                     </li>
 
                     <li style={{ marginTop: "10px" }}>
-                      <b>Total % Error:</b> {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
+                      <b>Total % Error:</b>{" "}
+                      {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
                     </li>
                   </ul>
-
                 </>
               )}
             </>

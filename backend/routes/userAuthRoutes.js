@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved } = require('../controllers/userAuthController');
+const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDraft,getDraftUsers,removeFromDraft } = require('../controllers/userAuthController');
 
 const { checkActiveUser } = require('../middleware/checkActiveUser');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -34,5 +34,11 @@ router.get('/targets-achieved',targetsAchieved);
 router.get('/check-auth',authMiddleware,checkActiveUser,(req,res) => {
     res.json({ active: true });
 })
+
+router.put('/:id/add-to-draft',authMiddleware,addToDraft);
+
+router.put('/:id/remove-from-draft',authMiddleware,removeFromDraft);
+
+router.get('/get-drafts',authMiddleware,getDraftUsers);
 
 module.exports = router;

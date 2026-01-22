@@ -12,6 +12,11 @@ const UserSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: true },
   lastLoginSession: { type: String, default: null },
+  isDraft: {
+        type: Boolean,
+        default: false,
+        index: true,
+  },
 
   myerrors: [
     {

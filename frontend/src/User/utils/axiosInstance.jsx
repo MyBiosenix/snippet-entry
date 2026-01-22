@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "https://api.freelancing-project.com/api", 
+  baseURL: "http://localhost:5098/api", 
 });
 
 axiosInstance.interceptors.request.use(

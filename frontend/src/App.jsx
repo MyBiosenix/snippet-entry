@@ -24,6 +24,7 @@ import Active from './Admin/Pages/Active'
 import Inactive from './Admin/Pages/Inactive'
 import ChangePassword from './Admin/Pages/ChangePassword'
 import Result from './Admin/Pages/Result'
+import Draft from './Admin/Pages/Draft'
 
 import ProtectedRoute from './User/utils/ProtectedRoute'
 import TA from './Admin/Pages/TA'
@@ -74,7 +75,7 @@ function App() {
           <Route path='/admin/user-queries' element={<UQ/>}/>
           <Route path='/admin/active-users' element={<Active/>}/>
           <Route path='/admin/inactive-users' element={<Inactive/>}/>
-          
+          <Route path='/admin/drafts' element={<Draft/>}/>
 
 
           {/*SubAdmin Routes*/}

@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-function MuComp() {
+function DraftComp() {
   const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
@@ -20,22 +20,23 @@ function MuComp() {
 
   const admin = JSON.parse(localStorage.getItem("admin"));
   const role = admin?.role;
-
-  const token = localStorage.getItem("token"); // ✅ for auth routes
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetchUsers();
+    fetchDraftUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchUsers = async () => {
+  // ✅ Fetch ONLY Draft Users
+  const fetchDraftUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:5098/api/auth/all-users", {
+      // 🔥 Change this route if your backend uses another path
+      const res = await axios.get("http://localhost:5098/api/auth/get-drafts", {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      alert(err.response?.data?.message || "Error fetching users");
+      alert(err.response?.data?.message || "Error fetching draft users");
       setUsers([]);
     }
   };
@@ -47,7 +48,7 @@ function MuComp() {
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
-      fetchUsers();
+      fetchDraftUsers();
     } catch (err) {
       alert(err.response?.data?.message || err.message);
     }
@@ -60,7 +61,7 @@ function MuComp() {
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
-      fetchUsers();
+      fetchDraftUsers();
     } catch (err) {
       alert(err.response?.data?.message || err.message);
     }
@@ -72,36 +73,13 @@ function MuComp() {
       await axios.delete(`http://localhost:5098/api/auth/${id}/delete`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
-      fetchUsers();
+      fetchDraftUsers();
     } catch (err) {
       alert(err.response?.data?.message || "Server error");
     }
   };
 
-  // ✅ Draft routes (based on your backend)
- const handleAddToDraft = async (id) => {
-    // ✅ instantly update UI
-    setUsers((prev) =>
-      prev.map((u) => (u._id === id ? { ...u, isDraft: true } : u))
-    );
-
-    try {
-      await axios.put(
-        `http://localhost:5098/api/auth/${id}/add-to-draft`,
-        {},
-        { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
-      );
-      // optional: no need to refetch full list
-    } catch (err) {
-      // ❌ rollback if failed
-      setUsers((prev) =>
-        prev.map((u) => (u._id === id ? { ...u, isDraft: false } : u))
-      );
-      alert(err.response?.data?.message || err.message);
-    }
-  };
-
-
+  // ✅ Remove from Draft (Move back to Manage Users)
   const handleRemoveFromDraft = async (id) => {
     try {
       await axios.put(
@@ -109,12 +87,13 @@ function MuComp() {
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
-      fetchUsers();
+      fetchDraftUsers();
     } catch (err) {
       alert(err.response?.data?.message || err.message);
     }
   };
 
+  // --- Helpers for search ---
   const normalize = (v) => String(v ?? "").toLowerCase().trim();
 
   const expirySearchString = (expiry) => {
@@ -132,6 +111,7 @@ function MuComp() {
     return `${locale} ${dmy} ${monthName}`.toLowerCase();
   };
 
+  // --- Search filter ---
   const filteredUsers = useMemo(() => {
     const term = normalize(searchTerm);
     if (!term) return users;
@@ -141,22 +121,19 @@ function MuComp() {
       const email = normalize(u.email);
       const pkg = normalize(u.packages?.name);
       const status = u.isActive ? "active" : "inactive";
-
       const expiryStr = expirySearchString(u.date);
-
-      const draftStatus = u.isDraft ? "draft" : "not draft";
 
       return (
         name.includes(term) ||
         email.includes(term) ||
         pkg.includes(term) ||
         status.includes(term) ||
-        expiryStr.includes(term) ||
-        draftStatus.includes(term)
+        expiryStr.includes(term)
       );
     });
   }, [users, searchTerm]);
 
+  // --- Sort by expiry ---
   const sortedUsers = useMemo(() => {
     const data = [...filteredUsers];
 
@@ -175,8 +152,8 @@ function MuComp() {
     return data;
   }, [filteredUsers, sortField, sortOrder]);
 
+  // --- Pagination ---
   const totalPages = Math.ceil(sortedUsers.length / itemsPerPage) || 1;
-
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = sortedUsers.slice(indexOfFirstItem, indexOfLastItem);
@@ -185,6 +162,13 @@ function MuComp() {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
+  const toggleExpirySort = () => {
+    setSortField("expiry");
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    setCurrentPage(1);
+  };
+
+  // --- Export Excel ---
   const exportToExcel = () => {
     const data = sortedUsers.map((u, i) => ({
       "Sr No.": i + 1,
@@ -193,30 +177,21 @@ function MuComp() {
       Email: u.email,
       Password: u.password,
       Status: u.isActive ? "Active" : "Inactive",
-      Draft: u.isDraft ? "Yes" : "No",
       "Expiry Date": u.date ? new Date(u.date).toLocaleDateString() : "-",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
-    XLSX.writeFile(workbook, "UsersList.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Draft Users");
+    XLSX.writeFile(workbook, "DraftUsers.xlsx");
   };
 
+  // --- Export PDF ---
   const exportToPDF = () => {
     const doc = new jsPDF();
-    doc.text("Users List", 14, 15);
+    doc.text("Draft Users List", 14, 15);
 
-    const tableColumn = [
-      "Sr No.",
-      "Name",
-      "Package Taken",
-      "Email",
-      "Password",
-      "Status",
-      "Draft",
-      "Expiry Date",
-    ];
+    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Password", "Status", "Expiry Date"];
 
     const tableRows = sortedUsers.map((u, i) => [
       i + 1,
@@ -225,7 +200,6 @@ function MuComp() {
       u.email,
       u.password,
       u.isActive ? "Active" : "Inactive",
-      u.isDraft ? "Yes" : "No",
       u.date ? new Date(u.date).toLocaleDateString() : "-",
     ]);
 
@@ -237,38 +211,20 @@ function MuComp() {
       headStyles: { fillColor: [41, 128, 185] },
     });
 
-    doc.save("UsersList.pdf");
-  };
-
-  const toggleExpirySort = () => {
-    setSortField("expiry");
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    setCurrentPage(1);
-  };
-
-  const goalTarget = (pkgName) => {
-    if (pkgName === "Gold") return 100;
-    if (pkgName === "VIP" || pkgName === "Diamond") return 200;
-    return "-";
+    doc.save("DraftUsers.pdf");
   };
 
   return (
     <div className="comp">
-      <h3>Manage Users</h3>
+      <h3>Draft Users</h3>
 
       <div className="incomp">
         <div className="go">
-          <h4>All Users List</h4>
+          <h4>Draft Users List</h4>
 
           <div style={{ display: "flex", gap: 10 }}>
-            {role === "superadmin" && (
-              <button className="type" onClick={() => navigate("/admin/manage-user/add-user")}>
-                + Add User
-              </button>
-            )}
-
-            <button className="type" onClick={() => navigate("/admin/drafts")}>
-              Drafts
+            <button className="type" onClick={() => navigate("/admin/manage-user")}>
+              ← Back
             </button>
           </div>
         </div>
@@ -301,7 +257,7 @@ function MuComp() {
           <input
             type="text"
             className="search"
-            placeholder="Search name / email / status / package / expiry / draft..."
+            placeholder="Search name / email / status / package / expiry..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -309,108 +265,98 @@ function MuComp() {
             }}
           />
         </div>
+
         <div className="mytable">
-            <table>
-          <thead>
-            <tr>
-              <th>Sr.No.</th>
-              <th>Name</th>
-              <th>Package Taken</th>
-              <th>Email Id</th>
-              <th>Password</th>
-              <th>Status</th>
-              <th>Goal Status</th>
-              <th>Expiry Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+          <table>
+            <thead>
+              <tr>
+                <th>Sr.No.</th>
+                <th>Name</th>
+                <th>Package Taken</th>
+                <th>Email Id</th>
+                <th>Password</th>
+                <th>Status</th>
+                <th>Expiry Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
 
-          <tbody>
-            {currentItems.length > 0 ? (
-              currentItems.map((u, index) => (
-                <tr key={u._id}>
-                  <td>{indexOfFirstItem + index + 1}</td>
-                  <td>{u.name}</td>
-                  <td>{u.packages?.name || "No Package"}</td>
-                  <td>{u.email}</td>
-                  <td>{u.password}</td>
+            <tbody>
+              {currentItems.length > 0 ? (
+                currentItems.map((u, index) => (
+                  <tr key={u._id}>
+                    <td>{indexOfFirstItem + index + 1}</td>
+                    <td>{u.name}</td>
+                    <td>{u.packages?.name || "No Package"}</td>
+                    <td>{u.email}</td>
+                    <td>{u.password}</td>
 
-                  <td>
-                    {u.isActive ? (
-                      <span style={{ color: "green", fontWeight: "bold" }}>Active</span>
-                    ) : (
-                      <span style={{ color: "red", fontWeight: "bold" }}>Inactive</span>
-                    )}
-                  </td>
+                    <td>
+                      {u.isActive ? (
+                        <span style={{ color: "green", fontWeight: "bold" }}>Active</span>
+                      ) : (
+                        <span style={{ color: "red", fontWeight: "bold" }}>Inactive</span>
+                      )}
+                    </td>
 
-                  <td>
-                    {u.currentIndex}/{goalTarget(u.packages?.name)}
-                  </td>
+                    <td>{u.date ? new Date(u.date).toLocaleDateString() : "-"}</td>
 
-                  <td>{u.date ? new Date(u.date).toLocaleDateString() : "-"}</td>
+                    <td className="mybtnnns">
+                      {role === "superadmin" && (
+                        <>
+                          <button
+                            className="edit"
+                            onClick={() =>
+                              navigate("/admin/manage-user/add-user", {
+                                state: { userToEdit: u },
+                              })
+                            }
+                          >
+                            Edit
+                          </button>
 
-                  <td className="mybtnnns">
-                    {role === "superadmin" && (
-                      <>
-                        <button
-                          className="edit"
-                          onClick={() =>
-                            navigate("/admin/manage-user/add-user", {
-                              state: { userToEdit: u },
-                            })
-                          }
-                        >
-                          Edit
+                          <button className="delete" onClick={() => handleDelete(u._id)}>
+                            Delete
+                          </button>
+                        </>
+                      )}
+
+                      {u.isActive ? (
+                        <button className="inactive" onClick={() => handleDeactivate(u._id)}>
+                          Deactivate
                         </button>
-
-                        <button className="delete" onClick={() => handleDelete(u._id)}>
-                          Delete
+                      ) : (
+                        <button className="active" onClick={() => handleActivate(u._id)}>
+                          Activate
                         </button>
-                      </>
-                    )}
+                      )}
 
-                    {u.isActive ? (
-                      <button className="inactive" onClick={() => handleDeactivate(u._id)}>
-                        Deactivate
-                      </button>
-                    ) : (
-                      <button className="active" onClick={() => handleActivate(u._id)}>
-                        Activate
-                      </button>
-                    )}
-
-                    {u.isDraft ? (
                       <button
-                        className="inactive"
+                        className="draft"
                         onClick={() => handleRemoveFromDraft(u._id)}
-                        title="Click to remove from Drafts"
+                        title="Move back to Manage Users"
                       >
-                        In Draft
+                        Remove Draft
                       </button>
-                    ) : (
-                      <button className="active" onClick={() => handleAddToDraft(u._id)}>
-                        Add to Draft
-                      </button>
-                    )}
 
-                    <button
-                      className="report"
-                      onClick={() => navigate("/admin/manage-user/result", { state: { user: u } })}
-                    >
-                      Report
-                    </button>
+                      <button
+                        className="report"
+                        onClick={() => navigate("/admin/manage-user/result", { state: { user: u } })}
+                      >
+                        Report
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: "center", color: "gray" }}>
+                    No draft users found
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="9" style={{ textAlign: "center", color: "gray" }}>
-                  No users found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {sortedUsers.length > 0 && (
@@ -439,4 +385,4 @@ function MuComp() {
   );
 }
 
-export default MuComp;
+export default DraftComp;

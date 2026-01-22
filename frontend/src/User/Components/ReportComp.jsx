@@ -24,7 +24,7 @@ function ReportComp() {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`https://api.freelancing-project.com/api/snippet/user-visible/${userId}`)
+    fetch(`http://localhost:5098/api/snippet/user-visible/${userId}`)
       .then(res => res.json())
       .then(data => {
         console.log("Fetched data:", data); 

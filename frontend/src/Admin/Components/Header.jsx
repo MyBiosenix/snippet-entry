@@ -31,7 +31,7 @@ function Header() {
             localStorage.removeItem('token');
             localStorage.removeItem('adminId');
 
-            navigate('/admin/login')
+            navigate('/admin/login');
         }
     }
   return (
