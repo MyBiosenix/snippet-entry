@@ -31,7 +31,7 @@ function DraftComp() {
   const fetchDraftUsers = async () => {
     try {
       // 🔥 Change this route if your backend uses another path
-      const res = await axios.get("http://localhost:5098/api/auth/get-drafts", {
+      const res = await axios.get("https://api.freelancing-project.com/api/auth/get-drafts", {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       setUsers(Array.isArray(res.data) ? res.data : []);
@@ -44,7 +44,7 @@ function DraftComp() {
   const handleActivate = async (id) => {
     try {
       await axios.put(
-        `http://localhost:5098/api/auth/${id}/activate`,
+        `https://api.freelancing-project.com/api/auth/${id}/activate`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
@@ -57,7 +57,7 @@ function DraftComp() {
   const handleDeactivate = async (id) => {
     try {
       await axios.put(
-        `http://localhost:5098/api/auth/${id}/deactivate`,
+        `https://api.freelancing-project.com/api/auth/${id}/deactivate`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
@@ -70,7 +70,7 @@ function DraftComp() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
-      await axios.delete(`http://localhost:5098/api/auth/${id}/delete`, {
+      await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       fetchDraftUsers();
@@ -83,7 +83,7 @@ function DraftComp() {
   const handleRemoveFromDraft = async (id) => {
     try {
       await axios.put(
-        `http://localhost:5098/api/auth/${id}/remove-from-draft`,
+        `https://api.freelancing-project.com/api/auth/${id}/remove-from-draft`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );

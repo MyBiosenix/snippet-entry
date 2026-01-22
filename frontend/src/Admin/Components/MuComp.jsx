@@ -30,7 +30,7 @@ function MuComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:5098/api/auth/all-users", {
+      const res = await axios.get("https://api.freelancing-project.com/api/auth/all-users", {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       setUsers(Array.isArray(res.data) ? res.data : []);
@@ -43,7 +43,7 @@ function MuComp() {
   const handleActivate = async (id) => {
     try {
       await axios.put(
-        `http://localhost:5098/api/auth/${id}/activate`,
+        `https://api.freelancing-project.com/api/auth/${id}/activate`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
@@ -56,7 +56,7 @@ function MuComp() {
   const handleDeactivate = async (id) => {
     try {
       await axios.put(
-        `http://localhost:5098/api/auth/${id}/deactivate`,
+        `https://api.freelancing-project.com/api/auth/${id}/deactivate`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
@@ -69,7 +69,7 @@ function MuComp() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
-      await axios.delete(`http://localhost:5098/api/auth/${id}/delete`, {
+      await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       fetchUsers();
@@ -87,7 +87,7 @@ function MuComp() {
 
     try {
       await axios.put(
-        `http://localhost:5098/api/auth/${id}/add-to-draft`,
+        `https://api.freelancing-project.com/api/auth/${id}/add-to-draft`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
@@ -105,7 +105,7 @@ function MuComp() {
   const handleRemoveFromDraft = async (id) => {
     try {
       await axios.put(
-        `http://localhost:5098/api/auth/${id}/remove-from-draft`,
+        `https://api.freelancing-project.com/api/auth/${id}/remove-from-draft`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );

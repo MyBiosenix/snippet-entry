@@ -17,7 +17,7 @@ function SMpComp() {
 
   const fetchPackages = async () => {
     try {
-      const res = await axios.get('http://localhost:5098/api/package/all-packages');
+      const res = await axios.get('https://api.freelancing-project.com/api/package/all-packages');
       console.log("API Response:", res.data);
       setPackages(res.data);
     } catch (err) {
@@ -36,7 +36,7 @@ function SMpComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this Package?')) {
       try {
-        await axios.delete(`http://localhost:5098/api/package/${id}/delete-package`);
+        await axios.delete(`https://api.freelancing-project.com/api/package/${id}/delete-package`);
         fetchPackages();
       } catch (err) {
         alert(err.response?.data?.message || 'Server error');

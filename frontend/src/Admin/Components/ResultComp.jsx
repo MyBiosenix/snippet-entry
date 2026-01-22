@@ -25,7 +25,7 @@ function ResultComp() {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`http://localhost:5098/api/snippet/results/${userId}`)
+    fetch(`https://api.freelancing-project.com/api/snippet/results/${userId}`)
       .then((res) => res.json())
       .then((data) => {
         const cleaned = data.map((r, index) => {
@@ -71,7 +71,7 @@ function ResultComp() {
   const handleToggleVisibility = async (errorId) => {
     try {
       const res = await fetch(
-        `http://localhost:5098/api/snippet/toggle/${userId}/${errorId}`,
+        `https://api.freelancing-project.com/api/snippet/toggle/${userId}/${errorId}`,
         { method: "PATCH" }
       );
       const data = await res.json();
@@ -142,7 +142,7 @@ function ResultComp() {
 
     try {
       const res = await fetch(
-        `http://localhost:5098/api/snippet/update/${userId}/${selected._id}`,
+        `https://api.freelancing-project.com/api/snippet/update/${userId}/${selected._id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
