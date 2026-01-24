@@ -8,7 +8,7 @@ function ProfileComp() {
 
   const getUser = async () => {
     try {
-      const res = await axios.get(`http://localhost:5098/api/auth/${id}/user`);
+      const res = await axios.get(`https://api.freelancing-project.com/api/auth/${id}/user`);
       setUser(res.data);
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
