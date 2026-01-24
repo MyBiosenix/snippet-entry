@@ -1,3 +1,4 @@
+// ResultComp.jsx (FULLY UPDATED with Edit User Text feature)
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import "../Styles/result.css";
@@ -5,10 +6,11 @@ import "../Styles/result.css";
 function ResultComp() {
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
+
+  // existing: edit error counts
   const [editMode, setEditMode] = useState(false);
   const [visibleTotal, setVisibleTotal] = useState(0);
-
-  const [sortOrder, setSortOrder] = useState("default"); // default | asc | desc
+  const [sortOrder, setSortOrder] = useState("default");
 
   const [editValues, setEditValues] = useState({
     capitalSmall: 0,
@@ -18,17 +20,23 @@ function ResultComp() {
     totalErrorPercentage: 0,
   });
 
+  // ✅ NEW: edit user text
+  const [editUserTextMode, setEditUserTextMode] = useState(false);
+  const [userTextDraft, setUserTextDraft] = useState("");
+  const [savingUserText, setSavingUserText] = useState(false);
+
   const location = useLocation();
   const user = location.state?.user;
   const userId = user?._id || localStorage.getItem("userId");
 
+  // ---------- Fetch results ----------
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`https://api.freelancing-project.com/api/snippet/results/${userId}`)
+    fetch(`http://localhost:5098/api/snippet/results/${userId}`)
       .then((res) => res.json())
       .then((data) => {
-        const cleaned = data.map((r, index) => {
+        const cleaned = (Array.isArray(data) ? data : []).map((r, index) => {
           let content = r.snippetId?.content || "";
           let userText = r.userText || "";
 
@@ -40,17 +48,24 @@ function ResultComp() {
 
           return {
             ...r,
-            pageNumber: index + 1, // ✅ ORIGINAL PAGE NUMBER FIXED
+            pageNumber: index + 1,
             snippetId: { ...r.snippetId, content },
             userText,
           };
         });
 
         setResults(cleaned);
+        // if selected exists, refresh it from cleaned list
+        if (selected?._id) {
+          const fresh = cleaned.find((x) => x._id === selected._id);
+          if (fresh) setSelected(fresh);
+        }
       })
       .catch((err) => console.error(err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  // ---------- Visible total ----------
   useEffect(() => {
     const total = results
       .filter((r) => r.visibleToUser)
@@ -58,6 +73,7 @@ function ResultComp() {
     setVisibleTotal(total);
   }, [results]);
 
+  // ---------- Sort ----------
   const sortedResults = useMemo(() => {
     if (sortOrder === "default") return results;
 
@@ -68,10 +84,11 @@ function ResultComp() {
     });
   }, [results, sortOrder]);
 
+  // ---------- Toggle visibility ----------
   const handleToggleVisibility = async (errorId) => {
     try {
       const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/toggle/${userId}/${errorId}`,
+        `http://localhost:5098/api/snippet/toggle/${userId}/${errorId}`,
         { method: "PATCH" }
       );
       const data = await res.json();
@@ -82,28 +99,38 @@ function ResultComp() {
             r._id === errorId ? { ...r, visibleToUser: data.visibleToUser } : r
           )
         );
+
         if (selected?._id === errorId) {
           setSelected((prev) => ({ ...prev, visibleToUser: data.visibleToUser }));
         }
+      } else {
+        alert(data.message || "Failed to toggle visibility");
       }
     } catch (err) {
       console.error(err);
     }
   };
 
+  // ---------- Select snippet ----------
   const handleSnippetClick = (r) => {
     if (selected?._id === r._id) {
       setSelected(null);
       setEditMode(false);
-    } else {
-      setSelected(r);
-      setEditMode(false);
+      setEditUserTextMode(false);
+      return;
     }
+
+    setSelected(r);
+    setEditMode(false);
+    setEditUserTextMode(false);
   };
 
+  // ---------- Edit counts (existing) ----------
   const handleEditClick = (r) => {
     setSelected(r);
     setEditMode(true);
+    setEditUserTextMode(false);
+
     setEditValues({
       capitalSmall: Number(r.capitalSmall || 0),
       punctuation: Number(r.punctuation || 0),
@@ -142,13 +169,14 @@ function ResultComp() {
 
     try {
       const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/update/${userId}/${selected._id}`,
+        `http://localhost:5098/api/snippet/update/${userId}/${selected._id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(editValues),
         }
       );
+
       const data = await res.json();
       if (!res.ok) return alert(data.message || "Failed");
 
@@ -169,6 +197,65 @@ function ResultComp() {
     }
   };
 
+  // ---------- ✅ Edit User Text ----------
+  const startEditUserText = () => {
+    if (!selected) return;
+    setUserTextDraft(selected.userText || "");
+    setEditUserTextMode(true);
+    setEditMode(false);
+  };
+
+  const cancelEditUserText = () => {
+    setEditUserTextMode(false);
+    setUserTextDraft("");
+    if (selected) {
+      const fresh = results.find((r) => r._id === selected._id);
+      if (fresh) setSelected(fresh);
+    }
+  };
+
+  const saveUserText = async () => {
+    if (!selected) return;
+
+    try {
+      setSavingUserText(true);
+
+      // ✅ This endpoint should recompute errors in backend using evaluator:
+      // PATCH /api/snippet/edit-text/:userId/:errorId
+      const res = await fetch(
+        `http://localhost:5098/api/snippet/edit-text/${userId}/${selected._id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userText: userTextDraft }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) return alert(data.message || "Failed");
+
+      // update list
+      setResults((prev) =>
+        prev.map((r) => (r._id === selected._id ? { ...r, ...data.updated } : r))
+      );
+
+      // update selected
+      setSelected((prev) => ({
+        ...prev,
+        ...data.updated,
+        snippetId: prev.snippetId, // keep populated snippet
+      }));
+
+      setEditUserTextMode(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update user text");
+    } finally {
+      setSavingUserText(false);
+    }
+  };
+
+  // ---------- Highlighter (your existing) ----------
   function highlightErrors(original = "", userText = "") {
     const normalize = (s = "") =>
       s
@@ -195,7 +282,6 @@ function ResultComp() {
     const m = oNorm.length;
     const n = uNorm.length;
 
-    // LCS DP
     const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
     for (let i = 1; i <= m; i++) {
       for (let j = 1; j <= n; j++) {
@@ -236,7 +322,6 @@ function ResultComp() {
     for (let k = 0; k < align.length; k++) {
       const { ow, uw } = align[k];
 
-      // Missing word
       if (ow && !uw) {
         result.push(
           <span key={k} className="error-red" data-tip="Missing word">
@@ -246,7 +331,6 @@ function ResultComp() {
         continue;
       }
 
-      // Extra word
       if (!ow && uw) {
         result.push(
           <span key={k} className="error-red" data-tip="Extra word">
@@ -256,14 +340,12 @@ function ResultComp() {
         continue;
       }
 
-      // Both present
-      const baseOraw = stripPunct(ow); // keep case
+      const baseOraw = stripPunct(ow);
       const baseUraw = stripPunct(uw);
 
       const baseOlower = baseOraw.toLowerCase();
       const baseUlower = baseUraw.toLowerCase();
 
-      // ✅ Capital/Small mistake (same letters ignoring case, but case differs)
       if (baseOlower === baseUlower && baseOraw !== baseUraw) {
         result.push(
           <span key={k} className="error-red" data-tip="Capital/Small mistake">
@@ -273,7 +355,6 @@ function ResultComp() {
         continue;
       }
 
-      // ✅ Spelling mistake
       if (baseOlower !== baseUlower) {
         result.push(
           <span key={k} className="error-red" data-tip="Spelling mistake">
@@ -283,7 +364,6 @@ function ResultComp() {
         continue;
       }
 
-      // ✅ Punctuation differs
       const pO = getPunct(ow);
       const pU = getPunct(uw);
 
@@ -296,7 +376,6 @@ function ResultComp() {
         continue;
       }
 
-      // Correct
       result.push(<span key={k}>{uw} </span>);
     }
 
@@ -348,13 +427,10 @@ function ResultComp() {
             {sortedResults.map((r) => (
               <div key={r._id} className="snippet-item-wrapper">
                 <p
-                  className={`snippet-item ${
-                    selected?._id === r._id ? "active" : ""
-                  }`}
+                  className={`snippet-item ${selected?._id === r._id ? "active" : ""}`}
                   onClick={() => handleSnippetClick(r)}
                 >
-                  Page {r.pageNumber} –{" "}
-                  {Number(r.totalErrorPercentage || 0).toFixed(2)}%
+                  Page {r.pageNumber} – {Number(r.totalErrorPercentage || 0).toFixed(2)}%
                 </p>
 
                 <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
@@ -364,6 +440,7 @@ function ResultComp() {
                   >
                     {r.visibleToUser ? "Visible ✅" : "Hidden ❌"}
                   </button>
+
                   <button className="edit-btn" onClick={() => handleEditClick(r)}>
                     Edit ✏️
                   </button>
@@ -376,6 +453,7 @@ function ResultComp() {
         <div className="result-details">
           {selected ? (
             <>
+              {/* ✅ Edit numeric errors */}
               {editMode && (
                 <>
                   <h3 className="edit-title">Edit Errors for this Snippet</h3>
@@ -390,6 +468,7 @@ function ResultComp() {
                         min="0"
                       />
                     </label>
+
                     <label>
                       Punctuation:
                       <input
@@ -400,6 +479,7 @@ function ResultComp() {
                         min="0"
                       />
                     </label>
+
                     <label>
                       Missing/Extra Word:
                       <input
@@ -410,6 +490,7 @@ function ResultComp() {
                         min="0"
                       />
                     </label>
+
                     <label>
                       Spelling:
                       <input
@@ -422,8 +503,7 @@ function ResultComp() {
                     </label>
 
                     <p className="edit-total">
-                      <b>Total % Error:</b>{" "}
-                      {Number(editValues.totalErrorPercentage || 0).toFixed(2)}%
+                      <b>Total % Error:</b> {Number(editValues.totalErrorPercentage || 0).toFixed(2)}%
                     </p>
 
                     <div className="edit-actions">
@@ -434,6 +514,7 @@ function ResultComp() {
                 </>
               )}
 
+              {/* ✅ Normal view */}
               {!editMode && (
                 <>
                   <div className="text-comparison">
@@ -445,16 +526,46 @@ function ResultComp() {
                     </div>
 
                     <div className="text-box user-box">
-                      <h4 className="snippet-title">User Text</h4>
+                      <h4
+                        className="snippet-title"
+                        style={{ display: "flex", justifyContent: "space-between", gap: 10 }}
+                      >
+                        User Text
+                        <button className="edit-btn" onClick={startEditUserText}>
+                          Edit User Text ✏️
+                        </button>
+                      </h4>
+
                       <div className="scrollable-text">
-                        {Number(selected.capitalSmall) > 0 ||
-                        Number(selected.punctuation) > 0 ||
-                        Number(selected.missingExtraWord) > 0 ||
-                        Number(selected.spelling) > 0 ? (
-                          highlightErrors(
-                            selected.snippetId?.content,
-                            selected.userText
-                          )
+                        {editUserTextMode ? (
+                          <div>
+                            <textarea
+                              value={userTextDraft}
+                              onChange={(e) => setUserTextDraft(e.target.value)}
+                              style={{
+                                width: "100%",
+                                minHeight: 180,
+                                padding: 10,
+                                borderRadius: 8,
+                                border: "1px solid #ccc",
+                              }}
+                            />
+
+                            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                              <button onClick={saveUserText} disabled={savingUserText}>
+                                {savingUserText ? "Saving..." : "Save ✅"}
+                              </button>
+
+                              <button onClick={cancelEditUserText} disabled={savingUserText}>
+                                Cancel ❌
+                              </button>
+                            </div>
+                          </div>
+                        ) : Number(selected.capitalSmall) > 0 ||
+                          Number(selected.punctuation) > 0 ||
+                          Number(selected.missingExtraWord) > 0 ||
+                          Number(selected.spelling) > 0 ? (
+                          highlightErrors(selected.snippetId?.content, selected.userText)
                         ) : (
                           <span>{selected.userText}</span>
                         )}
@@ -485,8 +596,7 @@ function ResultComp() {
                     </li>
 
                     <li style={{ marginTop: "10px" }}>
-                      <b>Total % Error:</b>{" "}
-                      {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
+                      <b>Total % Error:</b> {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
                     </li>
                   </ul>
                 </>

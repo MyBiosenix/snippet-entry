@@ -218,22 +218,79 @@ const updateSnippetErrors = async (req, res) => {
 };
 
 
+const editUserText = async (req, res) => {
+  try {
+    const { userId, errorId } = req.params;
+    const { userText } = req.body;
+
+    if (typeof userText !== "string") {
+      return res.status(400).json({ message: "userText is required (string)" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const target = user.myerrors.id(errorId);
+    if (!target) return res.status(404).json({ message: "Result not found" });
+
+    const snippet = await Snippets.findById(target.snippetId).select("content");
+    if (!snippet) return res.status(404).json({ message: "Snippet not found" });
+
+    target.userText = userText;
+
+    const { myerrors } = evaluateSnippet(snippet.content, userText);
+
+    target.capitalSmall = myerrors.capitalSmall;
+    target.punctuation = myerrors.punctuation;
+    target.missingExtraWord = myerrors.missingExtraWord;
+    target.spelling = myerrors.spelling;
+    target.totalErrorPercentage = myerrors.totalErrorPercentage;
+
+    target.editedAt = new Date();
+
+    user.markModified("myerrors");
+    await user.save();
+
+    return res.json({
+      message: "User text updated & re-evaluated",
+      updated: {
+        _id: target._id,
+        userText: target.userText,
+        capitalSmall: target.capitalSmall,
+        punctuation: target.punctuation,
+        missingExtraWord: target.missingExtraWord,
+        spelling: target.spelling,
+        totalErrorPercentage: target.totalErrorPercentage,
+        visibleToUser: target.visibleToUser,
+        snippetId: target.snippetId,
+        pageNumber: target.pageNumber,
+      },
+    });
+  } catch (err) {
+    console.error("editUserText error:", err);
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+
 const showUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
     const user = await User.findById(userId)
-      .populate("myerrors.snippetId", "title content"); // ✅ populate original snippet
+      .populate("myerrors.snippetId", "title content"); 
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user.myerrors); // ✅ return only submitted snippets
+    res.status(200).json(user.myerrors); 
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch user snippets" });
   }
 };
 
-module.exports = { getNextSnippet, submitSnippet, getUserResults, getNextSnippetIndex, toggleVisibility, getVisibleUserResults, updateSnippetErrors,showUser};
+module.exports = { getNextSnippet, submitSnippet, getUserResults, getNextSnippetIndex, toggleVisibility, getVisibleUserResults, updateSnippetErrors,showUser,editUserText};

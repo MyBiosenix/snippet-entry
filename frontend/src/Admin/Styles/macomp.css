@@ -1,7 +1,6 @@
 .Macomp{
     width: 100vw;
     height: 100vh;
-    overflow-x: hidden;
 }
 .comp{
     padding: 10px 20px;
@@ -15,18 +14,21 @@
     gap: 20px;
     background: #fff;
     padding: 10px 20px;
-    height: 500px;
+    height: auto;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
+
 .go{
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
+
 .go h4{
     font-size: 25px;
     margin: 0;
 }
+
 .go input{
     width: 270px;
 }
@@ -50,6 +52,17 @@
     padding: 10px 50px;
     width: 300px;
 }
+.table-wrapper{
+  width: 100%;
+  overflow-x: auto;    
+  overflow-y: visible;  
+  border: 1px solid #e6e6e6;
+  scrollbar-width: thin;
+  scrollbar-color: #2575fc white;
+  border-radius: 12px;
+  background: #fff;
+}
+
 table {
   border-collapse: collapse;
 }
@@ -73,9 +86,10 @@ td{
 }
 .mybtnnns button {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   border-radius: 4px;
   height: 35px;
+  width: 100px;
   display: flex;
   align-items: center;
   justify-content: center;

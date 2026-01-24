@@ -1,9 +1,9 @@
 import React from 'react'
-import '../Styles/macomp.css'
-import Header from '../Components/Header'
 import DraftComp from '../Components/DraftComp'
+import Header from '../Components/Header'
+import '../Styles/macomp.css'
 
-function Draft() {
+function Drafts() {
   return (
     <div className='Macomp'>
         <Header/>
@@ -12,4 +12,4 @@ function Draft() {
   )
 }
 
-export default Draft
+export default Drafts

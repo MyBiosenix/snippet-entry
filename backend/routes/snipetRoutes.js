@@ -8,7 +8,8 @@ const {
   toggleVisibility,
   getVisibleUserResults,
   updateSnippetErrors,
-  showUser
+  showUser,
+  editUserText
 } = require('../controllers/snippetController');
 
 const authMiddleware = require('../middleware/authMiddleware');
@@ -24,6 +25,8 @@ router.patch('/toggle/:userId/:errorId', toggleVisibility);
 router.patch('/update/:userId/:errorId', updateSnippetErrors);
 
 router.get('/user-visible/:userId', getVisibleUserResults);
+
+router.patch("/edit-text/:userId/:errorId", editUserText);
 
 router.get('/user/:userId', showUser);
 

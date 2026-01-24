@@ -22,7 +22,7 @@ function TAComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('https://api.freelancing-project.com/api/auth/targets-achieved');
+      const res = await axios.get('http://localhost:5098/api/auth/targets-achieved');
       setUsers(res.data.users|| []);
     } catch (err) {
       alert(err.response?.data?.message || 'Error fetching users');
@@ -31,7 +31,7 @@ function TAComp() {
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
+      await axios.put(`http://localhost:5098/api/auth/${id}/activate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -40,7 +40,7 @@ function TAComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
+      await axios.put(`http://localhost:5098/api/auth/${id}/deactivate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -50,7 +50,7 @@ function TAComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
+        await axios.delete(`http://localhost:5098/api/auth/${id}/delete`);
         fetchUsers();
       } catch (err) {
         alert(err.response?.data?.message || 'Server error');

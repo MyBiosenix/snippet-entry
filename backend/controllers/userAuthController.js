@@ -207,6 +207,56 @@ exports.editUser = async(req,res) => {
     }
 }
 
+exports.addToDrafts = async(req,res) => {
+  try{
+    const { id } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      {isDraft:true},
+    )
+    if(!user){
+      return res.status(400).json({message:'User Not Found'});
+    }
+
+    res.status(200).json({message:'User Moved to Drafts'});
+  }
+  catch(err){
+    res.status(500).json(err.message);
+  }
+}
+
+exports.removeDrafts = async(req,res) => {
+  try{
+    const {id} = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      {isDraft:false}
+    )
+
+    if(!user){
+      return res.status(400).json({message:'User Not Found'});
+    }
+    res.status(200).json({message:'User Removed from Drafts'});
+  }
+  catch(err){
+    res.status(500).json(err.message);
+  }
+}
+
+exports.getDrafts = async(req,res) => {
+  try{
+    const drafts = await User.find({isDraft:true})
+      .populate('admin','name')
+      .populate('packages','name');
+    res.status(200).json(drafts);
+  }
+  catch(err){
+    res.status(500).json(err.message);
+  }
+}
+
 exports.changePassword = async(req,res) => {
     try{
         const {id} = req.params;

@@ -14,7 +14,7 @@ function SIAUComp() {
   const getInActiveUsers = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('https://api.freelancing-project.com/api/sub-admin/inactive-users',{
+        const res = await axios.get('http://localhost:5098/api/sub-admin/inactive-users',{
             headers:{
                 Authorization:`Bearer ${token}`
             }

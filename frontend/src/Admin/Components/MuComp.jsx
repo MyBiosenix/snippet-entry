@@ -1,62 +1,88 @@
-import React, { useEffect, useState } from 'react';
-import '../Styles/macomp.css';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import "../Styles/macomp.css";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 function MuComp() {
   const navigate = useNavigate();
+
   const [users, setUsers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
+
   const itemsPerPage = 10;
-  
-  const admin = JSON.parse(localStorage.getItem('admin'));
+
+  const admin = JSON.parse(localStorage.getItem("admin"));
   const role = admin?.role;
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+
+  const patchUserInState = (id, patch) => {
+    setUsers(prev => prev.map(u => (u._id === id ? { ...u, ...patch } : u)));
+  };
+
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('https://api.freelancing-project.com/api/auth/all-users');
-      setUsers(res.data);
+      const res = await axios.get("http://localhost:5098/api/auth/all-users");
+      setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      alert(err.response?.data?.message || 'Error fetching users');
+      alert(err.response?.data?.message || "Error fetching users");
     }
   };
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
-      fetchUsers();
+      await axios.put(`http://localhost:5098/api/auth/${id}/activate`);
+      patchUserInState(id, { isActive: true });
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message);
     }
   };
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
-      fetchUsers();
+      await axios.put(`http://localhost:5098/api/auth/${id}/deactivate`);
+      patchUserInState(id, { isActive: false });
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message);
     }
   };
 
+  const handleAddToDraft = async (id) => {
+    try {
+      await axios.put(`http://localhost:5098/api/auth/${id}/add-to-drafts`);
+      patchUserInState(id, { isDraft: true });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleRemoveFromDraft = async (id) => {
+    try {
+      await axios.put(`http://localhost:5098/api/auth/${id}/remove-from-drafts`);
+      patchUserInState(id, { isDraft: false });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
-        fetchUsers();
-      } catch (err) {
-        alert(err.response?.data?.message || 'Server error');
-      }
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5098/api/auth/${id}/delete`);
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || "Server error");
     }
   };
 
@@ -81,24 +107,23 @@ function MuComp() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const sortedUsers = sortUsers(filteredUsers);
   const currentItems = sortedUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
 
   const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
-  // 📦 Export to Excel
   const exportToExcel = () => {
     const data = filteredUsers.map((u, i) => ({
       "Sr No.": i + 1,
-      "Name": u.name,
-      "Package Taken": u.packages?.name || 'No Package',
-      "Email": u.email,
-      "Password": u.password,
-      "Status": u.isActive ? "Active" : "Inactive",
-      "Expiry Date": new Date(u.date).toLocaleDateString()
+      Name: u.name,
+      Admin: u.admin?.name || "No Admin",
+      "Package Taken": u.packages?.name || "No Package",
+      Email: u.email,
+      Password: u.password,
+      Status: u.isActive ? "Active" : "Inactive",
+      Draft: u.isDraft ? "Yes" : "No",
+      "Expiry Date": new Date(u.date).toLocaleDateString(),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -107,20 +132,32 @@ function MuComp() {
     XLSX.writeFile(workbook, "UsersList.xlsx");
   };
 
-  // 📄 Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("Users List", 14, 15);
 
-    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Password", "Status", "Expiry Date"];
+    const tableColumn = [
+      "Sr No.",
+      "Name",
+      "Admin",
+      "Package",
+      "Email",
+      "Password",
+      "Status",
+      "Draft",
+      "Expiry Date",
+    ];
+
     const tableRows = filteredUsers.map((u, i) => [
       i + 1,
       u.name,
-      u.packages?.name || 'No Package',
+      u.admin?.name || "No Admin",
+      u.packages?.name || "No Package",
       u.email,
       u.password,
       u.isActive ? "Active" : "Inactive",
-      new Date(u.date).toLocaleDateString()
+      u.isDraft ? "Yes" : "No",
+      new Date(u.date).toLocaleDateString(),
     ]);
 
     autoTable(doc, {
@@ -135,41 +172,57 @@ function MuComp() {
   };
 
   return (
-    <div className='comp'>
+    <div className="comp">
       <h3>Manage Users</h3>
-      <div className='incomp'>
-        <div className='go'>
+
+      <div className="incomp">
+        <div className="go">
           <h4>All Users List</h4>
-          {role === 'superadmin' && (
-            <button
-              className='type'
-              onClick={() => navigate('/admin/manage-user/add-user')}
-            >
-              + Add User
+
+          <div style={{ display: "flex", gap: 10 }}>
+            {role === "superadmin" && (
+              <button
+                className="type"
+                onClick={() => navigate("/admin/manage-user/add-user")}
+              >
+                + Add User
+              </button>
+            )}
+
+            {/* ✅ Optional: Draft page button (only if you make that route/page) */}
+            <button className="type" onClick={() => navigate("/admin/drafts")}>
+              Drafts
             </button>
-          )}
+          </div>
         </div>
 
-        <div className='go'>
+        <div className="go">
           <div className="mygo">
             <p onClick={exportToExcel}>Excel</p>
             <p onClick={exportToPDF}>PDF</p>
           </div>
-          <p 
-              style={{ cursor: "pointer", background:'#2575fc', color:'White', padding: '10px 20px', borderRadius:'10px' }}
-              onClick={() => {
-                setSortField("expiry");
-                setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                setCurrentPage(1);
-              }}
-            >
-              Expiry: {sortOrder === "asc" ? "↑" : "↓"}
-            </p>
+
+          <p
+            style={{
+              cursor: "pointer",
+              background: "#2575fc",
+              color: "White",
+              padding: "10px 20px",
+              borderRadius: "10px",
+            }}
+            onClick={() => {
+              setSortField("expiry");
+              setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+              setCurrentPage(1);
+            }}
+          >
+            Expiry: {sortOrder === "asc" ? "↑" : "↓"}
+          </p>
 
           <input
-            type='text'
-            className='search'
-            placeholder='Search by name or email'
+            type="text"
+            className="search"
+            placeholder="Search by name or email"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -178,94 +231,166 @@ function MuComp() {
           />
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Sr.No.</th>
-              <th>Name</th>
-              <th>Package Taken</th>
-              <th>Email Id</th>
-              <th>Password</th>
-              <th>Status</th>
-              <th>Goal Status</th>  
-              <th>Expiry Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentItems.length > 0 ? (
-              currentItems.map((u, index) => (
-                <tr key={u._id}>
-                  <td>{indexOfFirstItem + index + 1}</td>
-                  <td>{u.name}</td>
-                  <td>{u.packages?.name || 'No Package'}</td>
-                  <td>{u.email}</td>
-                  <td>{u.password}</td>
-                  <td>
-                    {u.isActive ? (
-                      <span style={{ color: 'green', fontWeight: 'bold' }}>Active</span>
-                    ) : (
-                      <span style={{ color: 'red', fontWeight: 'bold' }}>Inactive</span>
-                    )}
-                  </td>
-                  <td>{u.currentIndex}/{
-                    u.packages.name === "Gold" ? 100 :(u.packages.name === "VIP" || u.packages.name === "Diamond") ? 200:"-"}
-                  </td>
-                  <td>{new Date(u.date).toLocaleDateString()}</td>
-                  <td className='mybtnnns'>
-                    {role === 'superadmin' && (
-                      <>
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Sr.No.</th>
+                <th>Name</th>
+                <th>Admin</th>
+                <th>Package Taken</th>
+                <th>Email Id</th>
+                <th>Password</th>
+                <th>Status</th>
+                <th>Goal Status</th>
+                <th>Expiry Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {currentItems.length > 0 ? (
+                currentItems.map((u, index) => (
+                  <tr key={u._id}>
+                    <td>{indexOfFirstItem + index + 1}</td>
+                    <td>{u.name}</td>
+                    <td>{u.admin?.name || "No Admin"}</td>
+                    <td>{u.packages?.name || "No Package"}</td>
+                    <td>{u.email}</td>
+                    <td>{u.password}</td>
+
+                    <td>
+                      {u.isActive ? (
+                        <span style={{ color: "green", fontWeight: "bold" }}>
+                          Active
+                        </span>
+                      ) : (
+                        <span style={{ color: "red", fontWeight: "bold" }}>
+                          Inactive
+                        </span>
+                      )}
+                    </td>
+
+                    <td>
+                      {u.currentIndex}/
+                      {u.packages?.name === "Gold"
+                        ? 100
+                        : u.packages?.name === "VIP" ||
+                          u.packages?.name === "Diamond"
+                        ? 200
+                        : "-"}
+                    </td>
+
+                    <td>{new Date(u.date).toLocaleDateString()}</td>
+
+                    <td className="mybtnnns">
+                      {role === "superadmin" && (
+                        <>
+                          <button
+                            className="edit"
+                            onClick={() =>
+                              navigate("/admin/manage-user/add-user", {
+                                state: { userToEdit: u },
+                              })
+                            }
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="delete"
+                            onClick={() => handleDelete(u._id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+
+                      {u.isActive ? (
                         <button
-                          className='edit'
-                          onClick={() =>
-                            navigate('/admin/manage-user/add-user', { state: { userToEdit: u } })
-                          }
+                          className="inactive"
+                          onClick={() => handleDeactivate(u._id)}
                         >
-                          Edit
+                          Deactivate
                         </button>
-                        <button className='delete' onClick={() => handleDelete(u._id)}>
-                          Delete
+                      ) : (
+                        <button
+                          className="active"
+                          onClick={() => handleActivate(u._id)}
+                        >
+                          Activate
                         </button>
-                      </>
-                    )}
-                    {u.isActive ? (
-                      <button className='inactive' onClick={() => handleDeactivate(u._id)}>
-                        Deactivate
+                      )}
+
+                      {/* ✅ Draft Toggle UI */}
+                      {u.isDraft ? (
+                        <button
+                          className="inactive"
+                          onClick={() => handleRemoveFromDraft(u._id)}
+                          title="Click to remove from drafts"
+                        >
+                          In Draft
+                        </button>
+                      ) : (
+                        <button
+                          className="active"
+                          onClick={() => handleAddToDraft(u._id)}
+                        >
+                          Add To Draft
+                        </button>
+                      )}
+
+                      <button
+                        className="report"
+                        onClick={() =>
+                          navigate("/admin/manage-user/result", {
+                            state: { user: u },
+                          })
+                        }
+                      >
+                        Report
                       </button>
-                    ) : (
-                      <button className='active' onClick={() => handleActivate(u._id)}>
-                        Activate
-                      </button>
-                    )}
-                    <button
-                      className='report'
-                      onClick={() =>
-                        navigate('/admin/manage-user/result', { state: { user: u } })
-                      }
-                    >
-                      Report
-                    </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="10" style={{ textAlign: "center", color: "gray" }}>
+                    No users found
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan='8' style={{ textAlign: 'center', color: 'gray' }}>
-                  No users found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {filteredUsers.length > 0 && (
           <div className="pagination-container">
             <div className="pagination">
-              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>«</button>
-              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>‹</button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
-              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>»</button>
+              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>
+                «
+              </button>
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                ‹
+              </button>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                ›
+              </button>
+              <button
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                »
+              </button>
             </div>
           </div>
         )}
