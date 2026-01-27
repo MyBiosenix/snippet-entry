@@ -113,7 +113,7 @@ exports.getUsers = async(req,res) => {
     try{
         const allUsers = await User.find()
         .populate('admin','name')
-        .populate('packages','name')
+        .populate('packages','name pages')
         .select('-__V');
         res.status(200).json(allUsers);
     }
@@ -293,44 +293,56 @@ exports.getUser = async(req,res) => {
     }
 }
 
-exports.fetchStats = async(req,res) => {
-    try{
-        const {id} = req.params;
-        const user = await User.findById(id)
-            .populate("packages","name")
-            .populate("admin","name");
-        
-        if(!user){
-            return res.status(404).json({ message:'User Not Found'})
-        }
+exports.fetchStats = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        let goal = 0;
-        const packageName = user.packages?.name?.toLowerCase();
-        
-        if(packageName === 'gold') goal = 100;
-        else if(packageName === 'vip') goal = 200;
-        else if(packageName === 'diamond') goal = 200;
+    // ✅ include pages also
+    const user = await User.findById(id)
+      .populate("packages", "name pages")
+      .populate("admin", "name");
 
-        const completed = user.myerrors?.length || 0;
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
 
-        const underReview = goal - completed >=0 ? goal - completed : 0;
-        
-        const dashboardData = {
-            name: user.name,
-            package: user.packages?.name || "N/A",
-            goal,
-            completed,
-            underReview,
-            validTill: user.date,
-            admin: user.admin?.name || "N/A",
-        };
-        res.status(200).json(dashboardData);
-        } 
-        catch (err) {
-            console.error(err);
-            res.status(500).json({ message: err.message });
-        }
+    // ✅ default fallback
+    let goal = 100;
+
+    const packageName = user.packages?.name?.toLowerCase();
+    const pkgPages = user.packages?.pages;
+
+    // ✅ NEW: if pages exists, use it
+    if (typeof pkgPages === "number" && pkgPages > 0) {
+      goal = pkgPages;
+    } else {
+      // ✅ fallback to old behavior (for existing packages without pages)
+      if (packageName === "vip" || packageName === "diamond") goal = 200;
+      else goal = 100; // gold or anything else
+    }
+
+    const completed = user.myerrors?.length || 0;
+
+    const underReview = goal - completed >= 0 ? goal - completed : 0;
+
+    const dashboardData = {
+      name: user.name,
+      package: user.packages?.name || "N/A",
+      goal,
+      completed,
+      underReview,
+      validTill: user.date,
+      admin: user.admin?.name || "N/A",
+    };
+
+    res.status(200).json(dashboardData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
 };
+
+
 exports.getExpiringSoonUsers = async(req,res) => {
   try{
     const today = new Date();

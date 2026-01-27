@@ -12,11 +12,13 @@ function APComp() {
   const [price, setPrice] = useState('');
   const [nameError, setNameError] = useState('');
   const [priceError, setPriceError] = useState('');
+  const [pages, setPages] = useState('');
 
   useEffect(() => {
     if (packageToEdit) {
       setName(packageToEdit.name || '');
       setPrice(packageToEdit.price || '');
+      setPages(packageToEdit.pages || '');
     }
   }, [packageToEdit]);
 
@@ -33,6 +35,7 @@ function APComp() {
       setPriceError('Price is required');
       valid = false;
     }
+    
 
     if (!valid) return;
 
@@ -40,14 +43,14 @@ function APComp() {
       if (packageToEdit) {
         const res = await axios.put(
           `https://api.freelancing-project.com/api/package/${packageToEdit._id}/edit-package`,
-          { name, price }
+          { name, price,pages }
         );
         alert(res.data.message || "Package updated successfully");
       } else {
 
         const res = await axios.post(
           'https://api.freelancing-project.com/api/package/create-package',
-          { name, price }
+          { name, price, pages }
         );
         alert(res.data.message || "Package added successfully");
       }
@@ -74,10 +77,17 @@ function APComp() {
           <input
             type="number"
             value={price}
-            placeholder="Enter Price (Per Paragraph)*"
+            placeholder="Enter Price*"
             onChange={(e) => setPrice(e.target.value)}
           />
           {priceError && <p className="error">{priceError}</p>}
+
+          <input
+            type="number"
+            value={pages}
+            placeholder="Enter Number of Pages*"
+            onChange={(e) => setPages(e.target.value)}
+          />
         </div>
 
         <div className="bttns">

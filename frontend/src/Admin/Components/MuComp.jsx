@@ -6,6 +6,25 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+
+const formatExpiry = (dateVal) => {
+  if (!dateVal) return "";
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return "";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  // Make a few formats so search is easy
+  return [
+    `${dd}/${mm}/${yyyy}`,
+    `${dd}-${mm}-${yyyy}`,
+    `${yyyy}-${mm}-${dd}`,
+    d.toLocaleDateString(), // uses browser locale
+  ].join(" ");
+};
+
 function MuComp() {
   const navigate = useNavigate();
 
@@ -97,11 +116,18 @@ function MuComp() {
     return data;
   };
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter((u) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+
+    const name = (u.name || "").toLowerCase();
+    const email = (u.email || "").toLowerCase();
+
+    const expirySearch = formatExpiry(u.date).toLowerCase();
+
+    return name.includes(q) || email.includes(q) || expirySearch.includes(q);
+  });
+
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -222,7 +248,7 @@ function MuComp() {
           <input
             type="text"
             className="search"
-            placeholder="Search by name or email"
+            placeholder="Search by name or email or expiry"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -273,13 +299,13 @@ function MuComp() {
 
                     <td>
                       {u.currentIndex}/
-                      {u.packages?.name === "Gold"
-                        ? 100
-                        : u.packages?.name === "VIP" ||
-                          u.packages?.name === "Diamond"
+                      {typeof u.packages?.pages === "number" && u.packages.pages > 0
+                        ? u.packages.pages
+                        : u.packages?.name === "VIP" || u.packages?.name === "Diamond"
                         ? 200
-                        : "-"}
+                        : 100}
                     </td>
+
 
                     <td>{new Date(u.date).toLocaleDateString()}</td>
 

@@ -118,6 +118,7 @@ function MpComp() {
               <th>Sr.No.</th>
               <th>Package Name</th>
               <th>Price (Per Paragraph)</th>
+              <th>No. of Pages</th>
               {role === 'superadmin' && (
                 <>
                   <th>Action</th>
@@ -132,6 +133,7 @@ function MpComp() {
                   <td>{index + 1}</td>
                   <td>{p.name}</td>
                   <td>{p.price}</td>
+                  <td>{p.pages}</td>
                   <td className='mybtnnns'>
                     {role === 'superadmin' && (
                       <>

@@ -5,24 +5,35 @@ const { evaluateSnippet } = require('../utils/evaluator')
 const getNextSnippet = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId).populate("packages", "name");
+
+    const user = await User.findById(userId).populate("packages", "name pages");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     let maxSnippets = 100;
-    const packageName = user.packages?.name?.toLowerCase();
 
-    if (packageName === "vip" || packageName === "diamond") {
-      maxSnippets = 200;
+    const packageName = user.packages?.name?.toLowerCase();
+    const pkgPages = user.packages?.pages;
+
+    if (typeof pkgPages === "number" && pkgPages > 0) {
+      maxSnippets = pkgPages;
+    } else {
+
+      if (packageName === "vip" || packageName === "diamond") {
+        maxSnippets = 200;
+      } else {
+        maxSnippets = 100; // Gold or anything else
+      }
     }
 
     if (!user.snippetOrder || user.snippetOrder.length === 0) {
       const allSnippets = await Snippets.find().select("_id");
 
-      if (!allSnippets.length)
+      if (!allSnippets.length) {
         return res.status(404).json({ message: "No snippets found in database" });
+      }
 
       const shuffled = allSnippets
-        .map(s => s._id)
+        .map((s) => s._id)
         .sort(() => Math.random() - 0.5)
         .slice(0, maxSnippets);
 
@@ -31,8 +42,15 @@ const getNextSnippet = async (req, res) => {
       await user.save();
     }
 
+    // ✅ ensure order is not bigger than package limit
     if (user.snippetOrder.length > maxSnippets) {
       user.snippetOrder = user.snippetOrder.slice(0, maxSnippets);
+
+      // also clamp currentIndex if needed
+      if (user.currentIndex > user.snippetOrder.length) {
+        user.currentIndex = user.snippetOrder.length;
+      }
+
       await user.save();
     }
 
@@ -52,12 +70,12 @@ const getNextSnippet = async (req, res) => {
       totalSnippets: user.snippetOrder.length,
       snippet,
     });
-
   } catch (err) {
     console.error("Error in getNextSnippet:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 

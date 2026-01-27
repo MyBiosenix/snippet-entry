@@ -2,18 +2,19 @@ const Packages = require('../models/Package');
 
 exports.createPackage = async(req,res) => {
     try{
-        const { name, price } = req.body;
+        const { name, price, pages } = req.body;
         const existingPackage = await Packages.findOne({name});
         if(existingPackage){
             return res.status(400).json({message: 'Package Already Exists'});
         }
         const newPackage = await Packages.create({
-            name,price
+            name,price,pages
         });
         res.status(200).json({message: 'Package Created Succesfully', Packages:{
             _id:newPackage.id,
             name:newPackage.name,
-            price:newPackage.price
+            price:newPackage.price,
+            pages:newPackage.pages
         }});
 
     }
@@ -45,7 +46,7 @@ exports.getpackagesNames = async(req,res) => {
 exports.editpackages = async(req,res) => {
     try{
         const {id} = req.params;
-        const {name,price} = req.body;
+        const {name,price,pages} = req.body;
 
         const package = await Packages.findById(id);
 
@@ -54,6 +55,7 @@ exports.editpackages = async(req,res) => {
         }
         package.name = name;
         package.price = price;
+        package.pages = pages
 
         await package.save();
         res.status(200).json({message:'Package Updated Succesfully'});
