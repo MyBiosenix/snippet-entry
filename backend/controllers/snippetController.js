@@ -1,8 +1,6 @@
 const Snippets = require('../models/Snippet');
 const User = require('../models/User');
 const { evaluateSnippet } = require('../utils/evaluator')
-const { analyze } = require("../utils/analyzer");
-
 
 const getNextSnippet = async (req, res) => {
   try {
@@ -85,11 +83,10 @@ const submitSnippet = async (req, res) => {
   try {
     const { userId, snippetId, userText } = req.body;
 
-    const snippet = await Snippets.findById(snippetId).select("content");
+    const snippet = await Snippets.findById(snippetId);
     if (!snippet) return res.status(404).json({ message: "Snippet not found" });
 
-    // ✅ one truth: counts + tokens
-    const { errors, displayTokens } = analyze(snippet.content, userText);
+    const { myerrors, debugParts } = evaluateSnippet(snippet.content, userText, { debug: true });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -98,22 +95,20 @@ const submitSnippet = async (req, res) => {
       snippetId,
       userText,
       pageNumber: user.currentIndex + 1,
-      ...errors,
-      displayTokens, // ✅ store for frontend
+      ...myerrors,
     });
 
     user.markModified("myerrors");
     user.currentIndex = user.currentIndex + 1;
     await user.save();
 
-    return res.json({
+    res.json({
       message: "Evaluation saved",
-      errors,
-      displayTokens,
+      errors: myerrors,
+      debug: debugParts,
     });
   } catch (err) {
-    console.error("submitSnippet error:", err);
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -123,33 +118,13 @@ const getUserResults = async (req, res) => {
     const { userId } = req.params;
 
     const user = await User.findById(userId)
-      .populate("myerrors.snippetId", "title content")
-      .lean();
+      .populate("myerrors.snippetId", "title content");
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const results = (user.myerrors || []).map((err) => {
-      const original = err.snippetId?.content || "";
-      const userText = err.userText || "";
-
-      // ✅ if tokens missing/empty → compute and return
-      if (!Array.isArray(err.displayTokens) || err.displayTokens.length === 0) {
-        const { errors, displayTokens } = analyze(original, userText);
-
-        return {
-          ...err,
-          ...errors,          // optional: keeps counts consistent
-          displayTokens,
-        };
-      }
-
-      return err;
-    });
-
-    return res.json(results);
+    res.json(user.myerrors);
   } catch (err) {
-    console.error("getUserResults error:", err);
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -279,18 +254,16 @@ const editUserText = async (req, res) => {
     const snippet = await Snippets.findById(target.snippetId).select("content");
     if (!snippet) return res.status(404).json({ message: "Snippet not found" });
 
-    // ✅ one truth: re-evaluate counts + tokens
-    const { errors, displayTokens } = analyze(snippet.content, userText);
-
     target.userText = userText;
 
-    target.capitalSmall = errors.capitalSmall;
-    target.punctuation = errors.punctuation;
-    target.missingExtraWord = errors.missingExtraWord;
-    target.spelling = errors.spelling;
-    target.totalErrorPercentage = errors.totalErrorPercentage;
+    const { myerrors } = evaluateSnippet(snippet.content, userText);
 
-    target.displayTokens = displayTokens; // ✅ important
+    target.capitalSmall = myerrors.capitalSmall;
+    target.punctuation = myerrors.punctuation;
+    target.missingExtraWord = myerrors.missingExtraWord;
+    target.spelling = myerrors.spelling;
+    target.totalErrorPercentage = myerrors.totalErrorPercentage;
+
     target.editedAt = new Date();
 
     user.markModified("myerrors");
@@ -309,7 +282,6 @@ const editUserText = async (req, res) => {
         visibleToUser: target.visibleToUser,
         snippetId: target.snippetId,
         pageNumber: target.pageNumber,
-        displayTokens: target.displayTokens, // ✅ send to frontend
       },
     });
   } catch (err) {

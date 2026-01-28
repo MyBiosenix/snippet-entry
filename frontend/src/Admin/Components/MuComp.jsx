@@ -50,7 +50,7 @@ function MuComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("https://api.freelancing-project.com/api/auth/all-users");
+      const res = await axios.get("http://localhost:5098/api/auth/all-users");
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching users");
@@ -59,7 +59,7 @@ function MuComp() {
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
+      await axios.put(`http://localhost:5098/api/auth/${id}/activate`);
       patchUserInState(id, { isActive: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -68,7 +68,7 @@ function MuComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
+      await axios.put(`http://localhost:5098/api/auth/${id}/deactivate`);
       patchUserInState(id, { isActive: false });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -77,7 +77,7 @@ function MuComp() {
 
   const handleAddToDraft = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/add-to-drafts`);
+      await axios.put(`http://localhost:5098/api/auth/${id}/add-to-drafts`);
       patchUserInState(id, { isDraft: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -86,7 +86,7 @@ function MuComp() {
 
   const handleRemoveFromDraft = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/remove-from-drafts`);
+      await axios.put(`http://localhost:5098/api/auth/${id}/remove-from-drafts`);
       patchUserInState(id, { isDraft: false });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -98,7 +98,7 @@ function MuComp() {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
 
     try {
-      await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
+      await axios.delete(`http://localhost:5098/api/auth/${id}/delete`);
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.message || "Server error");
