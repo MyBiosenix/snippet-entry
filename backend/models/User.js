@@ -22,16 +22,28 @@ const UserSchema = new mongoose.Schema({
     {
       snippetId: { type: mongoose.Schema.Types.ObjectId, ref: "Snippets" },
       userText: { type: String },
+
       capitalSmall: { type: Number, default: 0 },
       punctuation: { type: Number, default: 0 },
       missingExtraWord: { type: Number, default: 0 },
       spelling: { type: Number, default: 0 },
       totalErrorPercentage: { type: Number, default: 0 },
+
+      displayTokens: [
+        {
+          text: { type: String, default: "" },  
+          cls: { type: String, default: "" },  
+          tip: { type: String, default: "" },  
+        }
+      ],
+
       createdAt: { type: Date, default: Date.now },
+      editedAt: { type: Date, default: null }, 
       visibleToUser: { type: Boolean, default: false },
       pageNumber: { type: Number },
     }
   ],
+
 
   snippetOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: "Snippets" }],
   currentIndex: { type: Number, default: 0 },

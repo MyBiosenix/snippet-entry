@@ -9,7 +9,6 @@ ConnectDB();
 const folderPath = path.join(__dirname, "snippets");
 
 function getPageNoFromFilename(filename) {
-  // works for page252.txt, page253.txt, etc.
   const match = filename.toLowerCase().match(/^page(\d+)\.txt$/);
   return match ? Number(match[1]) : null;
 }
