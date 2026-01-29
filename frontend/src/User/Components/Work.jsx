@@ -22,12 +22,13 @@ function Work() {
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState("");
 
-  // ✅ track input type (important on mobile)
-  const lastInputTypeRef = useRef("");
-  const prevTextRef = useRef("");
-
   const userId = localStorage.getItem("userId");
   const token = localStorage.getItem("token");
+
+  // ✅ input security refs (mobile-safe)
+  const lastInputTypeRef = useRef("");
+  const prevTextRef = useRef("");
+  const isComposingRef = useRef(false); // for IME / composition keyboards
 
   const refreshCaptcha = useCallback(() => {
     setCaptchaText(makeCaptcha(5));
@@ -48,6 +49,7 @@ function Work() {
         setSnippetNumber(null);
         setTotalSnippets(null);
         setUserText("");
+        prevTextRef.current = "";
         refreshCaptcha();
         return;
       }
@@ -55,7 +57,9 @@ function Work() {
       setSnippet(data.snippet);
       setSnippetNumber(data.snippetNumber);
       setTotalSnippets(data.totalSnippets);
+
       setUserText("");
+      prevTextRef.current = "";
       setIsCompleted(false);
       refreshCaptcha();
     } catch (err) {
@@ -86,40 +90,66 @@ function Work() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ Block keyboard “clipboard suggestion” insertions
+  // ✅ STRICT block: paste/clipboard suggestion/text replacement (Android + iOS)
   const handleBeforeInput = (e) => {
-    // inputType examples: insertText, insertFromPaste, insertReplacementText, insertFromDrop...
-    const t = e?.nativeEvent?.inputType || "";
+    if (isCompleted) return;
+
+    const ne = e.nativeEvent;
+    const t = ne?.inputType || "";
+    const data = ne?.data ?? ""; // inserted chars (often present)
     lastInputTypeRef.current = t;
 
-    const blocked = [
+    // allow deletes/undo/redo
+    if (t.startsWith("delete") || t === "historyUndo" || t === "historyRedo") return;
+
+    // allow composition flow (for IME languages)
+    if (isComposingRef.current) return;
+
+    // hard-block known bulk insert types (both iOS + Gboard)
+    const blockedTypes = new Set([
       "insertFromPaste",
       "insertFromDrop",
       "insertFromYank",
-      "insertReplacementText", // often used by keyboard suggestions / clipboard insert
-    ];
+      "insertReplacementText", // suggestion / clipboard insert
+    ]);
 
-    if (blocked.includes(t)) {
+    if (blockedTypes.has(t)) {
       e.preventDefault();
-      setCaptchaError("Pasting / suggestion fill is not allowed.");
+      setCaptchaError("Pasting / keyboard suggestion fill is not allowed.");
+      return;
+    }
+
+    // block “bulk insert” even if it arrives as insertText
+    // (iOS & Gboard clipboard suggestion often inserts many chars at once)
+    if (typeof data === "string" && data.length > 1) {
+      e.preventDefault();
+      setCaptchaError("Pasting / keyboard suggestion fill is not allowed.");
+      return;
     }
   };
 
+  // ✅ fallback: if browser doesn't reliably fire beforeinput, revert suspicious jumps
   const handleChange = (e) => {
     const next = e.target.value;
     const prev = prevTextRef.current;
     const t = lastInputTypeRef.current;
 
-    // ✅ If a big chunk appears suddenly (common with keyboard clipboard suggestion), revert
-    const delta = next.length - prev.length;
-    const suspicious = delta > 1 && (t === "insertReplacementText" || t === "insertFromPaste");
+    if (!isComposingRef.current) {
+      const delta = next.length - prev.length;
 
-    if (suspicious) {
-      setCaptchaError("Pasting / suggestion fill is not allowed.");
-      // revert back
-      e.target.value = prev;
-      setUserText(prev);
-      return;
+      // if more than 1 character appears suddenly, treat as paste/suggestion
+      // (works even when inputType is empty or insertText)
+      const suspiciousBulk =
+        delta > 1 &&
+        (t === "insertText" || t === "insertReplacementText" || t === "insertFromPaste" || t === "");
+
+      if (suspiciousBulk) {
+        setCaptchaError("Pasting / keyboard suggestion fill is not allowed.");
+        // revert
+        e.target.value = prev;
+        setUserText(prev);
+        return;
+      }
     }
 
     prevTextRef.current = next;
@@ -185,12 +215,27 @@ function Work() {
                 disabled={isCompleted}
                 onBeforeInput={handleBeforeInput}
                 onChange={handleChange}
+                onCompositionStart={() => {
+                  isComposingRef.current = true;
+                }}
+                onCompositionEnd={() => {
+                  isComposingRef.current = false;
+                  // sync prev buffer after composition
+                  prevTextRef.current = userText;
+                }}
                 autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck={false}
                 autoComplete="off"
                 name="typing_field_no_autofill"
-                onPaste={(e) => e.preventDefault()}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  setCaptchaError("Pasting / keyboard suggestion fill is not allowed.");
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setCaptchaError("Pasting / keyboard suggestion fill is not allowed.");
+                }}
                 onCopy={(e) => e.preventDefault()}
                 onCut={(e) => e.preventDefault()}
                 onContextMenu={(e) => e.preventDefault()}
@@ -207,14 +252,21 @@ function Work() {
                         <span
                           key={i}
                           className="captchaChar"
-                          style={{ transform: `rotate(${(Math.random() * 20 - 10).toFixed(1)}deg)` }}
+                          style={{
+                            transform: `rotate(${(Math.random() * 20 - 10).toFixed(1)}deg)`,
+                          }}
                         >
                           {ch}
                         </span>
                       ))}
                     </div>
 
-                    <button type="button" className="captchaRefresh" onClick={refreshCaptcha} title="Refresh Captcha">
+                    <button
+                      type="button"
+                      className="captchaRefresh"
+                      onClick={refreshCaptcha}
+                      title="Refresh Captcha"
+                    >
                       ↻
                     </button>
 
@@ -228,6 +280,8 @@ function Work() {
                       }}
                       placeholder="Enter captcha"
                       autoComplete="off"
+                      onPaste={(e) => e.preventDefault()}
+                      onDrop={(e) => e.preventDefault()}
                     />
                   </div>
 
