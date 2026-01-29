@@ -47,6 +47,12 @@ const UserSchema = new mongoose.Schema({
 
   snippetOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: "Snippets" }],
   currentIndex: { type: Number, default: 0 },
+
+  reportDeclared:{
+        type: Boolean,
+        default: false,
+        index: true
+  }
 });
 
 module.exports = mongoose.model("User", UserSchema);

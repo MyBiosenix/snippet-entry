@@ -4,8 +4,6 @@ import { useNavigate, useLocation  } from "react-router-dom";
 import axios from 'axios'
 import { useEffect } from "react";
 
-
-
 function ChangePassComp() {
 
   const navigate = useNavigate();

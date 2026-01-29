@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "../Styles/work.css";
 
 function makeCaptcha(len = 5) {
@@ -21,6 +21,10 @@ function Work() {
   const [captchaText, setCaptchaText] = useState(() => makeCaptcha(5));
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState("");
+
+  // ✅ track input type (important on mobile)
+  const lastInputTypeRef = useRef("");
+  const prevTextRef = useRef("");
 
   const userId = localStorage.getItem("userId");
   const token = localStorage.getItem("token");
@@ -82,6 +86,46 @@ function Work() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ Block keyboard “clipboard suggestion” insertions
+  const handleBeforeInput = (e) => {
+    // inputType examples: insertText, insertFromPaste, insertReplacementText, insertFromDrop...
+    const t = e?.nativeEvent?.inputType || "";
+    lastInputTypeRef.current = t;
+
+    const blocked = [
+      "insertFromPaste",
+      "insertFromDrop",
+      "insertFromYank",
+      "insertReplacementText", // often used by keyboard suggestions / clipboard insert
+    ];
+
+    if (blocked.includes(t)) {
+      e.preventDefault();
+      setCaptchaError("Pasting / suggestion fill is not allowed.");
+    }
+  };
+
+  const handleChange = (e) => {
+    const next = e.target.value;
+    const prev = prevTextRef.current;
+    const t = lastInputTypeRef.current;
+
+    // ✅ If a big chunk appears suddenly (common with keyboard clipboard suggestion), revert
+    const delta = next.length - prev.length;
+    const suspicious = delta > 1 && (t === "insertReplacementText" || t === "insertFromPaste");
+
+    if (suspicious) {
+      setCaptchaError("Pasting / suggestion fill is not allowed.");
+      // revert back
+      e.target.value = prev;
+      setUserText(prev);
+      return;
+    }
+
+    prevTextRef.current = next;
+    setUserText(next);
+  };
+
   const handleSubmit = async () => {
     if (!snippet || !snippet._id || isCompleted) return;
 
@@ -138,18 +182,20 @@ function Work() {
                 className="input"
                 placeholder={isCompleted ? "✅ Work completed!" : "Start typing here..."}
                 value={userText}
-                onChange={(e) => setUserText(e.target.value)}
                 disabled={isCompleted}
+                onBeforeInput={handleBeforeInput}
+                onChange={handleChange}
                 autoCorrect="off"
                 autoCapitalize="none"
-                spellCheck="false"
+                spellCheck={false}
+                autoComplete="off"
+                name="typing_field_no_autofill"
                 onPaste={(e) => e.preventDefault()}
                 onCopy={(e) => e.preventDefault()}
                 onCut={(e) => e.preventDefault()}
                 onContextMenu={(e) => e.preventDefault()}
               />
 
-              {/* ✅ Responsive Captcha */}
               {!isCompleted && (
                 <div className="captchaWrap">
                   <label className="captchaLabel">Captcha</label>
@@ -161,21 +207,14 @@ function Work() {
                         <span
                           key={i}
                           className="captchaChar"
-                          style={{
-                            transform: `rotate(${(Math.random() * 20 - 10).toFixed(1)}deg)`,
-                          }}
+                          style={{ transform: `rotate(${(Math.random() * 20 - 10).toFixed(1)}deg)` }}
                         >
                           {ch}
                         </span>
                       ))}
                     </div>
 
-                    <button
-                      type="button"
-                      className="captchaRefresh"
-                      onClick={refreshCaptcha}
-                      title="Refresh Captcha"
-                    >
+                    <button type="button" className="captchaRefresh" onClick={refreshCaptcha} title="Refresh Captcha">
                       ↻
                     </button>
 
@@ -188,6 +227,7 @@ function Work() {
                         setCaptchaError("");
                       }}
                       placeholder="Enter captcha"
+                      autoComplete="off"
                     />
                   </div>
 

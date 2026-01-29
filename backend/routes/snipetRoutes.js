@@ -9,7 +9,9 @@ const {
   getVisibleUserResults,
   updateSnippetErrors,
   showUser,
-  editUserText
+  editUserText,
+  declareReport,
+  undeclareReport
 } = require('../controllers/snippetController');
 
 const authMiddleware = require('../middleware/authMiddleware');
@@ -29,5 +31,7 @@ router.get('/user-visible/:userId', getVisibleUserResults);
 router.patch("/edit-text/:userId/:errorId", editUserText);
 
 router.get('/user/:userId', showUser);
+
+
 
 module.exports = router;
