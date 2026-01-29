@@ -42,14 +42,14 @@ function APComp() {
     try {
       if (packageToEdit) {
         const res = await axios.put(
-          `http://localhost:5098/api/package/${packageToEdit._id}/edit-package`,
+          `https://api.freelancing-project.com/api/package/${packageToEdit._id}/edit-package`,
           { name, price,pages }
         );
         alert(res.data.message || "Package updated successfully");
       } else {
 
         const res = await axios.post(
-          'http://localhost:5098/api/package/create-package',
+          'https://api.freelancing-project.com/api/package/create-package',
           { name, price, pages }
         );
         alert(res.data.message || "Package added successfully");
