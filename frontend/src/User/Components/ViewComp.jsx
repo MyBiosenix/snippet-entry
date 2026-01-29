@@ -11,7 +11,7 @@ function ViewComp() {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`http://localhost:5098/api/snippet/user/${userId}`)
+    fetch(`https://api.freelancing-project.com/api/snippet/user/${userId}`)
       .then(res => res.json())
       .then(data => {
         console.log("Fetched snippets:", data);

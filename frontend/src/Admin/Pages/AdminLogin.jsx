@@ -33,7 +33,7 @@ function AdminLogin() {
 
       if(valid){
         try{
-          const res = await axios.post('http://localhost:5098/api/admin/login',{
+          const res = await axios.post('https://api.freelancing-project.com/api/admin/login',{
             email,password
           });
           alert('Login Succesful');

@@ -24,7 +24,7 @@ function SMuComp() {
   const fetchUsers = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5098/api/sub-admin/getusers',{
+        const res = await axios.get('https://api.freelancing-project.com/api/sub-admin/getusers',{
             headers:{
                 Authorization:`Bearer ${token}`
             }
@@ -38,7 +38,7 @@ function SMuComp() {
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`http://localhost:5098/api/auth/${id}/activate`);
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -47,7 +47,7 @@ function SMuComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`http://localhost:5098/api/auth/${id}/deactivate`);
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
