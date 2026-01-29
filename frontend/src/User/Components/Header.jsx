@@ -25,7 +25,7 @@ function Header() {
 
   try {
     const token = localStorage.getItem('token');
-    await fetch("https://api.freelancing-project.com/api/auth/logout", {
+    await fetch("http://localhost:5098/api/auth/logout", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });

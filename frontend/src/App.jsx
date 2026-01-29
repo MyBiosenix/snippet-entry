@@ -9,7 +9,6 @@ import Profile from './User/Pages/Profile'
 import Report from './User/Pages/Report'
 import View from './User/Pages/View'
 
-
 import AdminLogin from './Admin/Pages/AdminLogin'
 import AdminHome from './Admin/Pages/AdminHome'
 import MA from './Admin/Pages/MA'

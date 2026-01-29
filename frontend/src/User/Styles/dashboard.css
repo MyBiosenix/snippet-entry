@@ -52,6 +52,16 @@
     text-align: center;
     margin-top: 50px;
 }
+.timer{
+  text-align: center;
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.timer.expired{
+  color: red;
+}
 
 @media (max-width: 450px) {
   .dashboard{

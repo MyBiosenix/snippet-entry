@@ -109,18 +109,22 @@ exports.createUser = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-exports.getUsers = async(req,res) => {
-    try{
-        const allUsers = await User.find()
-        .populate('admin','name')
-        .populate('packages','name pages')
-        .select('-__V');
-        res.status(200).json(allUsers);
-    }
-    catch(err){
-        res.status(200).json(err.message);
-    }
-}
+
+exports.getUsers = async (req, res) => {
+  try {
+    const allUsers = await User.find()
+      .select("name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages") // ✅ only needed
+      .populate("admin", "name")
+      .populate("packages", "name pages")
+      .lean(); // ✅ faster
+
+    res.status(200).json(allUsers);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 function getRandomPassword(length = 7){
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&!()';
     let password = '';
@@ -129,7 +133,6 @@ function getRandomPassword(length = 7){
     }
     return password;
 }
-
 
 exports.activateUser = async(req,res) => {
     try{
@@ -141,6 +144,7 @@ exports.activateUser = async(req,res) => {
         res.status(400).json({message: err.message});
     }
 }
+
 exports.deactivateUser = async(req,res) => {
     try{
         const {id} = req.params;
@@ -151,6 +155,7 @@ exports.deactivateUser = async(req,res) => {
         res.status(400).json({message: err.message});
     }
 }
+
 exports.getActiveUsers = async(req,res) => {
     try{
         const activeusers = await User.find({isActive:true})
@@ -160,6 +165,7 @@ exports.getActiveUsers = async(req,res) => {
         res.status(400).json(err.message);
     }
 }
+
 exports.getInActiveUsers = async(req,res) => {
     try{
         const inactiveusers = await User.find({isActive:false});
@@ -297,7 +303,7 @@ exports.fetchStats = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ include pages also
+    
     const user = await User.findById(id)
       .populate("packages", "name pages")
       .populate("admin", "name");
@@ -306,19 +312,17 @@ exports.fetchStats = async (req, res) => {
       return res.status(404).json({ message: "User Not Found" });
     }
 
-    // ✅ default fallback
+    
     let goal = 100;
 
     const packageName = user.packages?.name?.toLowerCase();
     const pkgPages = user.packages?.pages;
 
-    // ✅ NEW: if pages exists, use it
     if (typeof pkgPages === "number" && pkgPages > 0) {
       goal = pkgPages;
     } else {
-      // ✅ fallback to old behavior (for existing packages without pages)
       if (packageName === "vip" || packageName === "diamond") goal = 200;
-      else goal = 100; // gold or anything else
+      else goal = 100; 
     }
 
     const completed = user.myerrors?.length || 0;

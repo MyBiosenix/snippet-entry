@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import "../Styles/work.css";
 
-/** ✅ Captcha helpers */
 function makeCaptcha(len = 5) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // removed O/0/I/1
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
@@ -19,10 +18,12 @@ function Work() {
   const [userText, setUserText] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
 
-  /** ✅ Captcha state */
   const [captchaText, setCaptchaText] = useState(() => makeCaptcha(5));
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState("");
+
+  const userId = localStorage.getItem("userId");
+  const token = localStorage.getItem("token");
 
   const refreshCaptcha = useCallback(() => {
     setCaptchaText(makeCaptcha(5));
@@ -30,22 +31,16 @@ function Work() {
     setCaptchaError("");
   }, []);
 
-  const userId = localStorage.getItem("userId");
-  const token = localStorage.getItem("token");
-
   const fetchNextSnippet = async () => {
     try {
-      const res = await fetch(`https://api.freelancing-project.com/api/snippet/next/${userId}`, {
+      const res = await fetch(`http://localhost:5098/api/snippet/next/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
 
       if (data.done) {
         setIsCompleted(true);
-        setSnippet({
-          title: "Work Completed!",
-          content: "Work Completed!",
-        });
+        setSnippet({ title: "Work Completed!", content: "Work Completed!" });
         setSnippetNumber(null);
         setTotalSnippets(null);
         setUserText("");
@@ -58,8 +53,6 @@ function Work() {
       setTotalSnippets(data.totalSnippets);
       setUserText("");
       setIsCompleted(false);
-
-      // ✅ new snippet => new captcha
       refreshCaptcha();
     } catch (err) {
       console.error("Error fetching snippet:", err);
@@ -78,6 +71,7 @@ function Work() {
         e.preventDefault();
       }
     };
+
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
 
@@ -91,7 +85,6 @@ function Work() {
   const handleSubmit = async () => {
     if (!snippet || !snippet._id || isCompleted) return;
 
-    // ✅ Captcha check ONLY
     if (normCaptcha(captchaInput) !== normCaptcha(captchaText)) {
       setCaptchaError("Captcha is incorrect. Please try again.");
       setCaptchaText(makeCaptcha(5));
@@ -106,13 +99,12 @@ function Work() {
     if (!confirmSubmit) return;
 
     try {
-      await fetch("https://api.freelancing-project.com/api/snippet/submit", {
+      await fetch("http://localhost:5098/api/snippet/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // ✅ userText can be empty (as you want)
         body: JSON.stringify({ userId, snippetId: snippet._id, userText }),
       });
 
@@ -122,8 +114,9 @@ function Work() {
     }
   };
 
-  const captchaOk =
-    normCaptcha(captchaInput) === normCaptcha(captchaText) && captchaInput.length > 0;
+  const captchaOk = useMemo(() => {
+    return normCaptcha(captchaInput) === normCaptcha(captchaText) && captchaInput.length > 0;
+  }, [captchaInput, captchaText]);
 
   return (
     <div className="mywork">
@@ -136,12 +129,7 @@ function Work() {
           )}
 
           <div className="workarea">
-            <div
-              className="para no-copy"
-              onCopy={(e) => e.preventDefault()}
-              onSelect={(e) => e.preventDefault()}
-              onContextMenu={(e) => e.preventDefault()}
-            >
+            <div className="para no-copy">
               <p>{snippet.content}</p>
             </div>
 
@@ -159,56 +147,22 @@ function Work() {
                 onCopy={(e) => e.preventDefault()}
                 onCut={(e) => e.preventDefault()}
                 onContextMenu={(e) => e.preventDefault()}
-              ></textarea>
+              />
 
-              {/* ✅ Captcha UI */}
+              {/* ✅ Responsive Captcha */}
               {!isCompleted && (
-                <div style={{ marginTop: 12 }}>
-                  <label style={{ fontWeight: 600, display: "block", marginBottom: 6 }}>
-                    Captcha
-                  </label>
+                <div className="captchaWrap">
+                  <label className="captchaLabel">Captcha</label>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 10,
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "relative",
-                        padding: "14px 18px",
-                        borderRadius: 8,
-                        border: "1px solid #c7c7c7",
-                        background: "linear-gradient(135deg, #f3f4f6, #e5e7eb)",
-                        fontWeight: 800,
-                        letterSpacing: 4,
-                        userSelect: "none",
-                        fontSize: 20,
-                        display: "flex",
-                        gap: 4,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "50%",
-                          left: "-10%",
-                          width: "120%",
-                          height: 2,
-                          background: "rgba(0,0,0,0.25)",
-                          transform: "rotate(-8deg)",
-                        }}
-                      />
+                  <div className="captchaRow">
+                    <div className="captchaBox" aria-label="captcha">
+                      <div className="captchaLine" />
                       {captchaText.split("").map((ch, i) => (
                         <span
                           key={i}
+                          className="captchaChar"
                           style={{
                             transform: `rotate(${(Math.random() * 20 - 10).toFixed(1)}deg)`,
-                            color: "#111827",
                           }}
                         >
                           {ch}
@@ -218,23 +172,15 @@ function Work() {
 
                     <button
                       type="button"
+                      className="captchaRefresh"
                       onClick={refreshCaptcha}
                       title="Refresh Captcha"
-                      style={{
-                        padding: "10px 12px",
-                        borderRadius: 8,
-                        border: "1px solid #d1d5db",
-                        background: "white",
-                        color: "black",
-                        cursor: "pointer",
-                        fontSize: 18,
-                        fontWeight: 700,
-                      }}
                     >
                       ↻
                     </button>
 
                     <input
+                      className="captchaInput"
                       type="text"
                       value={captchaInput}
                       onChange={(e) => {
@@ -242,37 +188,18 @@ function Work() {
                         setCaptchaError("");
                       }}
                       placeholder="Enter captcha"
-                      style={{
-                        flex: 1,
-                        minWidth: 180,
-                        height: 35,
-                        background: "white",
-                        borderWidth: "0.2px",
-                        borderRadius: 4,
-                        color: "black",
-                      }}
                     />
                   </div>
 
-                  {captchaError ? (
-                    <div style={{ color: "red", marginTop: 6, fontWeight: 600 }}>
-                      {captchaError}
-                    </div>
-                  ) : null}
+                  {captchaError ? <div className="captchaError">{captchaError}</div> : null}
                 </div>
               )}
 
-              {/* ✅ Submit depends ONLY on captcha + isCompleted */}
               <button
+                className="submitBtn"
                 onClick={handleSubmit}
                 disabled={isCompleted || !captchaOk}
-                title={
-                  isCompleted
-                    ? "Completed"
-                    : !captchaOk
-                    ? "Enter correct captcha"
-                    : "Submit"
-                }
+                title={isCompleted ? "Completed" : !captchaOk ? "Enter correct captcha" : "Submit"}
               >
                 {isCompleted ? "Completed" : "Submit"}
               </button>

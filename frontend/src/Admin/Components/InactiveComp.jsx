@@ -13,7 +13,7 @@ function InactiveComp() {
 
   const getInactiveUsers = async () => {
     try {
-      const res = await axios.get('https://api.freelancing-project.com/api/auth/inactive-users');
+      const res = await axios.get('http://localhost:5098/api/auth/inactive-users');
       setUsers(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Server Error');

@@ -9,21 +9,25 @@ function Dashboard() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
 
+  // ✅ NEW: countdown state
+  const [timeLeft, setTimeLeft] = useState("");
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const userId = localStorage.getItem('userId');
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem('token');
         if (!userId) {
           setError("No user ID found in localStorage");
           return;
         }
 
-        const res = await axios.get(`/auth/${userId}/dash-stats`,
-          {headers:{Authorization: `Bearer ${token}`}}
-        );
+        const res = await axios.get(`/auth/${userId}/dash-stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
         setStats(res.data);
       } catch (err) {
         console.error(err);
@@ -33,6 +37,40 @@ function Dashboard() {
 
     fetchStats();
   }, []);
+
+  // ✅ NEW: countdown effect (runs after stats is loaded)
+  useEffect(() => {
+    if (!stats?.validTill) return;
+
+    const pad = (n) => String(n).padStart(2, "0");
+
+    const compute = () => {
+      // If your validTill is just a date, this sets expiry to end-of-day
+      const expiry = new Date(stats.validTill);
+      expiry.setHours(23, 59, 59, 999);
+
+      const now = new Date();
+      const diff = expiry.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeLeft("Expired");
+        return;
+      }
+
+      const totalSeconds = Math.floor(diff / 1000);
+      const days = Math.floor(totalSeconds / (3600 * 24));
+      const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      setTimeLeft(`${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
+    };
+
+    compute(); // initial
+    const interval = setInterval(compute, 1000);
+
+    return () => clearInterval(interval);
+  }, [stats?.validTill]);
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
   if (!stats) return <p className='load'>Loading dashboard...</p>;
@@ -73,6 +111,11 @@ function Dashboard() {
 
       <p className='valid'>
         Subscription Validity: {new Date(stats.validTill).toLocaleDateString('en-GB')}
+      </p>
+
+      {/* ✅ NEW: timer below validity */}
+      <p className={`timer ${timeLeft === "Expired" ? "expired" : ""}`}>
+        Time Left: {timeLeft}
       </p>
     </div>
   );
