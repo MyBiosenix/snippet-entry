@@ -2,13 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import "../Styles/work.css";
 
 function makeCaptcha(len = 5) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const chars = "abcdefghijklmnopqrstuvwxysABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&";
   let out = "";
   for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 function normCaptcha(v) {
-  return String(v || "").trim().toUpperCase();
+  return String(v || "").trim();
 }
 
 function Work() {
@@ -119,8 +119,6 @@ function Work() {
       return;
     }
 
-    // block “bulk insert” even if it arrives as insertText
-    // (iOS & Gboard clipboard suggestion often inserts many chars at once)
     if (typeof data === "string" && data.length > 1) {
       e.preventDefault();
       setCaptchaError("Pasting / keyboard suggestion fill is not allowed.");
@@ -128,7 +126,6 @@ function Work() {
     }
   };
 
-  // ✅ fallback: if browser doesn't reliably fire beforeinput, revert suspicious jumps
   const handleChange = (e) => {
     const next = e.target.value;
     const prev = prevTextRef.current;
@@ -137,8 +134,6 @@ function Work() {
     if (!isComposingRef.current) {
       const delta = next.length - prev.length;
 
-      // if more than 1 character appears suddenly, treat as paste/suggestion
-      // (works even when inputType is empty or insertText)
       const suspiciousBulk =
         delta > 1 &&
         (t === "insertText" || t === "insertReplacementText" || t === "insertFromPaste" || t === "");
