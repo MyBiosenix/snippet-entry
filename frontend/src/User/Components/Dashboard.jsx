@@ -9,7 +9,6 @@ function Dashboard() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
 
-  // ✅ NEW: countdown state
   const [timeLeft, setTimeLeft] = useState("");
 
   const navigate = useNavigate();
@@ -38,14 +37,13 @@ function Dashboard() {
     fetchStats();
   }, []);
 
-  // ✅ NEW: countdown effect (runs after stats is loaded)
   useEffect(() => {
     if (!stats?.validTill) return;
 
     const pad = (n) => String(n).padStart(2, "0");
 
     const compute = () => {
-      // If your validTill is just a date, this sets expiry to end-of-day
+
       const expiry = new Date(stats.validTill);
       expiry.setHours(23, 59, 59, 999);
 
@@ -66,7 +64,7 @@ function Dashboard() {
       setTimeLeft(`${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
     };
 
-    compute(); // initial
+    compute();
     const interval = setInterval(compute, 1000);
 
     return () => clearInterval(interval);
@@ -80,14 +78,14 @@ function Dashboard() {
       <h3>Dashboard</h3>
 
       <div className='indash'>
-        <div className='dash'>
+        <div className='dash' onClick={() => navigate('/profile')}>
           <h4>Plan</h4>
           <MdSubscriptions className='dashicon' />
           <h5>{stats.package}</h5>
           <p>Data Conversion</p>
         </div>
 
-        <div className='dash'>
+        <div className='dash' onClick={() => navigate('/work')}>
           <h4>Goal</h4>
           <FaBullseye className='dashicon' />
           <h5>{stats.goal}</h5>
@@ -113,7 +111,6 @@ function Dashboard() {
         Subscription Validity: {new Date(stats.validTill).toLocaleDateString('en-GB')}
       </p>
 
-      {/* ✅ NEW: timer below validity */}
       <p className={`timer ${timeLeft === "Expired" ? "expired" : ""}`}>
         Time Left: {timeLeft}
       </p>
