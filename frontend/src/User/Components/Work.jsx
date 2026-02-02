@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "../Styles/work.css";
+import axios from "../utils/axiosInstance"; // ✅ same as Dashboard
 
 function makeCaptcha(len = 5) {
   const chars = "abcdefghijklmnopqrstuvwxysABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&";
@@ -25,10 +26,15 @@ function Work() {
   const userId = localStorage.getItem("userId");
   const token = localStorage.getItem("token");
 
+  // ✅ validity lock states
+  const [validTill, setValidTill] = useState(null);
+  const [isExpired, setIsExpired] = useState(false);
+  const [expiryChecked, setExpiryChecked] = useState(false);
+
   // ✅ input security refs (mobile-safe)
   const lastInputTypeRef = useRef("");
   const prevTextRef = useRef("");
-  const isComposingRef = useRef(false); // for IME / composition keyboards
+  const isComposingRef = useRef(false);
 
   const refreshCaptcha = useCallback(() => {
     setCaptchaText(makeCaptcha(5));
@@ -36,11 +42,57 @@ function Work() {
     setCaptchaError("");
   }, []);
 
+  // ✅ fetch validTill from dash-stats (same as Dashboard)
+  useEffect(() => {
+    const fetchValidity = async () => {
+      try {
+        if (!userId || !token) {
+          setExpiryChecked(true);
+          return;
+        }
+
+        const res = await axios.get(`/auth/${userId}/dash-stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const vt = res.data?.validTill || null;
+        setValidTill(vt);
+      } catch (err) {
+        // Don't clear localStorage here, just mark checked
+        console.error("Error fetching validity:", err?.message || err);
+      } finally {
+        setExpiryChecked(true);
+      }
+    };
+
+    fetchValidity();
+  }, [userId, token]);
+
+  // ✅ compute expired (valid till end of expiry day)
+  useEffect(() => {
+    if (!validTill) {
+      setIsExpired(false);
+      return;
+    }
+
+    const compute = () => {
+      const expiry = new Date(validTill);
+      expiry.setHours(23, 59, 59, 999);
+      setIsExpired(expiry.getTime() <= Date.now());
+    };
+
+    compute();
+    const t = setInterval(compute, 1000);
+    return () => clearInterval(t);
+  }, [validTill]);
+
   const fetchNextSnippet = async () => {
     try {
-      const res = await fetch(`https://api.freelancing-project.com/api/snippet/next/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `https://api.freelancing-project.com/api/snippet/next/${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       const data = await res.json();
 
       if (data.done) {
@@ -68,6 +120,19 @@ function Work() {
   };
 
   useEffect(() => {
+    // ✅ wait until we know expiry status
+    if (!expiryChecked) return;
+
+    // ✅ if expired, don't fetch work at all
+    if (isExpired) {
+      setSnippet({ title: "Plan Expired", content: "Your plan has expired." });
+      setSnippetNumber(null);
+      setTotalSnippets(null);
+      setUserText("");
+      prevTextRef.current = "";
+      return;
+    }
+
     fetchNextSnippet();
 
     const handleContextMenu = (e) => e.preventDefault();
@@ -88,29 +153,25 @@ function Work() {
       document.removeEventListener("keydown", handleKeyDown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [expiryChecked, isExpired]);
 
-  // ✅ STRICT block: paste/clipboard suggestion/text replacement (Android + iOS)
+  // ✅ STRICT block: paste/clipboard suggestion/text replacement
   const handleBeforeInput = (e) => {
-    if (isCompleted) return;
+    if (isCompleted || isExpired) return;
 
     const ne = e.nativeEvent;
     const t = ne?.inputType || "";
-    const data = ne?.data ?? ""; // inserted chars (often present)
+    const data = ne?.data ?? "";
     lastInputTypeRef.current = t;
 
-    // allow deletes/undo/redo
     if (t.startsWith("delete") || t === "historyUndo" || t === "historyRedo") return;
-
-    // allow composition flow (for IME languages)
     if (isComposingRef.current) return;
 
-    // hard-block known bulk insert types (both iOS + Gboard)
     const blockedTypes = new Set([
       "insertFromPaste",
       "insertFromDrop",
       "insertFromYank",
-      "insertReplacementText", // suggestion / clipboard insert
+      "insertReplacementText",
     ]);
 
     if (blockedTypes.has(t)) {
@@ -127,6 +188,8 @@ function Work() {
   };
 
   const handleChange = (e) => {
+    if (isExpired) return;
+
     const next = e.target.value;
     const prev = prevTextRef.current;
     const t = lastInputTypeRef.current;
@@ -140,7 +203,6 @@ function Work() {
 
       if (suspiciousBulk) {
         setCaptchaError("Pasting / keyboard suggestion fill is not allowed.");
-        // revert
         e.target.value = prev;
         setUserText(prev);
         return;
@@ -152,6 +214,11 @@ function Work() {
   };
 
   const handleSubmit = async () => {
+    if (isExpired) {
+      alert("Your plan has expired. Please contact admin to renew.");
+      return;
+    }
+
     if (!snippet || !snippet._id || isCompleted) return;
 
     if (normCaptcha(captchaInput) !== normCaptcha(captchaText)) {
@@ -184,11 +251,44 @@ function Work() {
   };
 
   const captchaOk = useMemo(() => {
+    if (isExpired) return false;
     return normCaptcha(captchaInput) === normCaptcha(captchaText) && captchaInput.length > 0;
-  }, [captchaInput, captchaText]);
+  }, [captchaInput, captchaText, isExpired]);
+
+  const locked = isExpired || isCompleted;
+
+  // if expiry not checked yet, show loading (optional)
+  if (!expiryChecked) {
+    return <p className="load">Loading...</p>;
+  }
 
   return (
     <div className="mywork">
+      {/* ✅ Expired banner */}
+      {isExpired ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 10,
+            background: "#fff1f2",
+            border: "1px solid #fecdd3",
+            color: "#9f1239",
+            fontWeight: 800,
+            marginBottom: 12,
+            textAlign: "center",
+            maxWidth: 900,
+            marginInline: "auto",
+          }}
+        >
+          ⛔ Your Plan has Expired. You can’t work until admin renews your validity.
+          {validTill ? (
+            <div style={{ marginTop: 8, fontWeight: 700, fontSize: 13 }}>
+              Valid Till: {new Date(validTill).toLocaleDateString("en-GB")}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {snippet && (
         <>
           {snippetNumber && (
@@ -205,9 +305,15 @@ function Work() {
             <div className="inputarea">
               <textarea
                 className="input"
-                placeholder={isCompleted ? "✅ Work completed!" : "Start typing here..."}
+                placeholder={
+                  isExpired
+                    ? "⛔ Plan Expired"
+                    : isCompleted
+                    ? "✅ Work completed!"
+                    : "Start typing here..."
+                }
                 value={userText}
-                disabled={isCompleted}
+                disabled={locked}
                 onBeforeInput={handleBeforeInput}
                 onChange={handleChange}
                 onCompositionStart={() => {
@@ -215,7 +321,6 @@ function Work() {
                 }}
                 onCompositionEnd={() => {
                   isComposingRef.current = false;
-                  // sync prev buffer after composition
                   prevTextRef.current = userText;
                 }}
                 autoCorrect="off"
@@ -236,7 +341,8 @@ function Work() {
                 onContextMenu={(e) => e.preventDefault()}
               />
 
-              {!isCompleted && (
+              {/* Captcha only if not completed and not expired */}
+              {!isCompleted && !isExpired && (
                 <div className="captchaWrap">
                   <label className="captchaLabel">Captcha</label>
 
@@ -287,10 +393,18 @@ function Work() {
               <button
                 className="submitBtn"
                 onClick={handleSubmit}
-                disabled={isCompleted || !captchaOk}
-                title={isCompleted ? "Completed" : !captchaOk ? "Enter correct captcha" : "Submit"}
+                disabled={locked || !captchaOk}
+                title={
+                  isExpired
+                    ? "Plan expired"
+                    : isCompleted
+                    ? "Completed"
+                    : !captchaOk
+                    ? "Enter correct captcha"
+                    : "Submit"
+                }
               >
-                {isCompleted ? "Completed" : "Submit"}
+                {isExpired ? "Plan Expired" : isCompleted ? "Completed" : "Submit"}
               </button>
             </div>
           </div>
