@@ -22,14 +22,47 @@ function ResultComp() {
   const [userTextDraft, setUserTextDraft] = useState("");
   const [savingUserText, setSavingUserText] = useState(false);
 
+  // ✅ Declare Result States
+  const [isDeclared, setIsDeclared] = useState(false);
+  const [declaredAt, setDeclaredAt] = useState(null);
+  const [declaring, setDeclaring] = useState(false);
+
   const location = useLocation();
   const user = location.state?.user;
   const userId = user?._id || localStorage.getItem("userId");
 
+  const token = localStorage.getItem("token");
+
+  const API_BASE = "https://api.freelancing-project.com/api";
+  const SNIPPET_BASE = `${API_BASE}/snippet`;
+  const AUTH_BASE = `${API_BASE}/auth`;
+
+  // ✅ helper: mark invalid only in sidebar
+  const isInvalidPage = (r) => Number(r?.totalErrorPercentage || 0) > 100;
+
+  // ✅ Fetch declared status
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`https://api.freelancing-project.com/api/snippet/results/${userId}`)
+    fetch(`${AUTH_BASE}/${userId}/user`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsDeclared(!!data?.isDeclared);
+        setDeclaredAt(data?.declaredAt || null);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // ✅ Fetch results
+  useEffect(() => {
+    if (!userId) return;
+
+    fetch(`${SNIPPET_BASE}/results/${userId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((res) => res.json())
       .then((data) => {
         const cleaned = (Array.isArray(data) ? data : []).map((r, index) => {
@@ -51,6 +84,7 @@ function ResultComp() {
         });
 
         setResults(cleaned);
+
         // if selected exists, refresh it from cleaned list
         if (selected?._id) {
           const fresh = cleaned.find((x) => x._id === selected._id);
@@ -83,10 +117,10 @@ function ResultComp() {
   // ---------- Toggle visibility ----------
   const handleToggleVisibility = async (errorId) => {
     try {
-      const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/toggle/${userId}/${errorId}`,
-        { method: "PATCH" }
-      );
+      const res = await fetch(`${SNIPPET_BASE}/toggle/${userId}/${errorId}`, {
+        method: "PATCH",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
 
       if (res.ok) {
@@ -107,6 +141,37 @@ function ResultComp() {
     }
   };
 
+  // ---------- ✅ Declare Result ----------
+  const handleDeclareResult = async () => {
+    if (!userId) return;
+
+    try {
+      setDeclaring(true);
+
+      const res = await fetch(`${AUTH_BASE}/declare-result/${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ declared: true }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) return alert(data.message || "Failed to declare result");
+
+      setIsDeclared(!!data.isDeclared);
+      setDeclaredAt(data.declaredAt || null);
+
+      alert("✅ Result declared to user");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to declare result");
+    } finally {
+      setDeclaring(false);
+    }
+  };
+
   // ---------- Select snippet ----------
   const handleSnippetClick = (r) => {
     if (selected?._id === r._id) {
@@ -121,7 +186,7 @@ function ResultComp() {
     setEditUserTextMode(false);
   };
 
-  // ---------- Edit counts (existing) ----------
+  // ---------- Edit counts ----------
   const handleEditClick = (r) => {
     setSelected(r);
     setEditMode(true);
@@ -164,14 +229,14 @@ function ResultComp() {
     if (!selected) return;
 
     try {
-      const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/update/${userId}/${selected._id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editValues),
-        }
-      );
+      const res = await fetch(`${SNIPPET_BASE}/update/${userId}/${selected._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(editValues),
+      });
 
       const data = await res.json();
       if (!res.ok) return alert(data.message || "Failed");
@@ -216,30 +281,26 @@ function ResultComp() {
     try {
       setSavingUserText(true);
 
-      // ✅ This endpoint should recompute errors in backend using evaluator:
-      // PATCH /api/snippet/edit-text/:userId/:errorId
-      const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/edit-text/${userId}/${selected._id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userText: userTextDraft }),
-        }
-      );
+      const res = await fetch(`${SNIPPET_BASE}/edit-text/${userId}/${selected._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ userText: userTextDraft }),
+      });
 
       const data = await res.json();
       if (!res.ok) return alert(data.message || "Failed");
 
-      // update list
       setResults((prev) =>
         prev.map((r) => (r._id === selected._id ? { ...r, ...data.updated } : r))
       );
 
-      // update selected
       setSelected((prev) => ({
         ...prev,
         ...data.updated,
-        snippetId: prev.snippetId, // keep populated snippet
+        snippetId: prev.snippetId,
       }));
 
       setEditUserTextMode(false);
@@ -251,7 +312,7 @@ function ResultComp() {
     }
   };
 
-  // ---------- Highlighter (your existing) ----------
+  // ---------- Highlighter ----------
   function highlightErrors(original = "", userText = "") {
     const normalize = (s = "") =>
       s
@@ -393,6 +454,21 @@ function ResultComp() {
         <p>
           <b>Mobile:</b> {user?.mobile}
         </p>
+
+        {/* ✅ Declare status */}
+        <p style={{ marginTop: 10 }}>
+          <b>Result Status:</b>{" "}
+          {isDeclared ? (
+            <span style={{ color: "green" }}>Declared ✅</span>
+          ) : (
+            <span style={{ color: "red" }}>Not Declared ❌</span>
+          )}
+        </p>
+        {isDeclared && declaredAt && (
+          <p style={{ fontSize: 13, opacity: 0.8 }}>
+            <b>Declared At:</b> {new Date(declaredAt).toLocaleString("en-IN")}
+          </p>
+        )}
       </div>
 
       <h2 className="page-title">Data Conversion Results</h2>
@@ -420,30 +496,71 @@ function ResultComp() {
           </select>
 
           <div className="sidebar-scroll">
-            {sortedResults.map((r) => (
-              <div key={r._id} className="snippet-item-wrapper">
-                <p
-                  className={`snippet-item ${selected?._id === r._id ? "active" : ""}`}
-                  onClick={() => handleSnippetClick(r)}
-                >
-                  Page {r.pageNumber} – {Number(r.totalErrorPercentage || 0).toFixed(2)}%
-                </p>
+            {sortedResults.map((r) => {
+              const err = Number(r.totalErrorPercentage || 0);
+              const invalid = isInvalidPage(r);
 
-                <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
-                  <button
-                    className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
-                    onClick={() => handleToggleVisibility(r._id)}
+              return (
+                <div key={r._id} className="snippet-item-wrapper">
+                  <p
+                    className={`snippet-item ${selected?._id === r._id ? "active" : ""} ${
+                      invalid ? "invalid-page" : ""
+                    }`}
+                    onClick={() => handleSnippetClick(r)}
                   >
-                    {r.visibleToUser ? "Visible ✅" : "Hidden ❌"}
-                  </button>
+                    Page {r.pageNumber} –{" "}
+                    {invalid ? (
+                      <>
+                        <span className="invalid-badge">INVALID</span>
+                        <span style={{ marginLeft: 8, opacity: 0.85 }}>
+                          ({err.toFixed(2)}%)
+                        </span>
+                      </>
+                    ) : (
+                      <span>{err.toFixed(2)}%</span>
+                    )}
+                  </p>
 
-                  <button className="edit-btn" onClick={() => handleEditClick(r)}>
-                    Edit ✏️
-                  </button>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
+                    <button
+                      className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
+                      onClick={() => handleToggleVisibility(r._id)}
+                    >
+                      {r.visibleToUser ? "Visible ✅" : "Hidden ❌"}
+                    </button>
+
+                    <button className="edit-btn" onClick={() => handleEditClick(r)}>
+                      Edit ✏️
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* ✅ Common Declare Result Button */}
+          <button
+            onClick={handleDeclareResult}
+            disabled={declaring || isDeclared}
+            style={{
+              marginTop: 12,
+              width: "100%",
+              padding: "10px",
+              borderRadius: 8,
+              border: "none",
+              background: isDeclared ? "#2ecc71" : "#0b5ed7",
+              color: "#fff",
+              cursor: declaring || isDeclared ? "not-allowed" : "pointer",
+              opacity: declaring || isDeclared ? 0.8 : 1,
+              fontWeight: 700,
+            }}
+          >
+            {isDeclared
+              ? "Result Already Declared ✅"
+              : declaring
+              ? "Declaring..."
+              : "Declare Result"}
+          </button>
         </div>
 
         <div className="result-details">
@@ -499,7 +616,8 @@ function ResultComp() {
                     </label>
 
                     <p className="edit-total">
-                      <b>Total % Error:</b> {Number(editValues.totalErrorPercentage || 0).toFixed(2)}%
+                      <b>Total % Error:</b>{" "}
+                      {Number(editValues.totalErrorPercentage || 0).toFixed(2)}%
                     </p>
 
                     <div className="edit-actions">
@@ -524,7 +642,11 @@ function ResultComp() {
                     <div className="text-box user-box">
                       <h4
                         className="snippet-title"
-                        style={{ display: "flex", justifyContent: "space-between", gap: 10 }}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
                       >
                         User Text
                         <button className="edit-btn" onClick={startEditUserText}>
@@ -552,7 +674,10 @@ function ResultComp() {
                                 {savingUserText ? "Saving..." : "Save ✅"}
                               </button>
 
-                              <button onClick={cancelEditUserText} disabled={savingUserText}>
+                              <button
+                                onClick={cancelEditUserText}
+                                disabled={savingUserText}
+                              >
                                 Cancel ❌
                               </button>
                             </div>
@@ -592,7 +717,8 @@ function ResultComp() {
                     </li>
 
                     <li style={{ marginTop: "10px" }}>
-                      <b>Total % Error:</b> {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
+                      <b>Total % Error:</b>{" "}
+                      {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
                     </li>
                   </ul>
                 </>

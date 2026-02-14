@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts} = require('../controllers/userAuthController');
+const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts,declareResult,markUserComplete,markUserIncomplete} = require('../controllers/userAuthController');
 
 const { checkActiveUser } = require('../middleware/checkActiveUser');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -19,6 +19,10 @@ router.put('/:id/edit-user',editUser);
 router.put('/:id/add-to-drafts',addToDrafts);
 router.put('/:id/remove-from-drafts',removeDrafts);
 router.get('/get-drafts',getDrafts);
+router.patch('/declare-result/:userId',declareResult);
+
+router.put('/:id/mark-incomplete',markUserIncomplete);
+router.put('/:id/mark-complete',markUserComplete);
 
 
 

@@ -1,8 +1,11 @@
 .report-page {
-  padding: 30px;
   width: 100vw;
+  height: 100vh;
   box-sizing: border-box;
   overflow-x: hidden;
+}
+.imim{
+  padding: 30px;
 }
 
 .report-title {

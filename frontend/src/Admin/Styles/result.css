@@ -8,6 +8,21 @@
   font-family: 'Inter', 'Segoe UI', sans-serif;
   color: #0f172a;
 }
+.invalid-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  background: #ff3b3b;
+  color: white;
+}
+
+.invalid-page {
+  border-left: 4px solid #ff3b3b;
+  padding-left: 10px;
+}
+
 
 .user-info {
   background: #ffffff;

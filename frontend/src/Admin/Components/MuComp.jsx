@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "../Styles/macomp.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
 
 const formatExpiry = (dateVal) => {
   if (!dateVal) return "";
@@ -30,21 +29,21 @@ function MuComp() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
 
   const itemsPerPage = 10;
 
-  const admin = JSON.parse(localStorage.getItem("admin"));
+  const admin = JSON.parse(localStorage.getItem("admin") || "{}");
   const role = admin?.role;
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
-
   const patchUserInState = (id, patch) => {
-    setUsers(prev => prev.map(u => (u._id === id ? { ...u, ...patch } : u)));
+    setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, ...patch } : u)));
   };
 
   const fetchUsers = async () => {
@@ -56,6 +55,7 @@ function MuComp() {
     }
   };
 
+  // -------------------- activate/deactivate --------------------
   const handleActivate = async (id) => {
     try {
       await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
@@ -74,6 +74,7 @@ function MuComp() {
     }
   };
 
+  // -------------------- drafts --------------------
   const handleAddToDraft = async (id) => {
     try {
       await axios.put(`https://api.freelancing-project.com/api/auth/${id}/add-to-drafts`);
@@ -92,7 +93,36 @@ function MuComp() {
     }
   };
 
+  // -------------------- ✅ mark complete/incomplete --------------------
+  const handleMarkIncomplete = async (id) => {
 
+    const prevUsers = users; // rollback backup
+    patchUserInState(id, { isComplete: false }); // optimistic
+
+    try {
+      // ✅ using PUT (more compatible)
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-incomplete`);
+    } catch (err) {
+      setUsers(prevUsers); // rollback
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleMarkComplete = async (id) => {
+
+    const prevUsers = users; // rollback backup
+    patchUserInState(id, { isComplete: true }); // optimistic
+
+    try {
+      // ✅ using PUT (more compatible)
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-complete`);
+    } catch (err) {
+      setUsers(prevUsers); // rollback
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+  // -------------------- delete --------------------
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
 
@@ -104,6 +134,7 @@ function MuComp() {
     }
   };
 
+  // -------------------- sort --------------------
   const sortUsers = (data) => {
     if (sortField === "expiry") {
       return [...data].sort((a, b) => {
@@ -115,37 +146,48 @@ function MuComp() {
     return data;
   };
 
-  const filteredUsers = users.filter((u) => {
+  // -------------------- filter/search --------------------
+  const filteredUsers = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return true;
+    if (!q) return users;
 
-    const name = (u.name || "").toLowerCase();
-    const email = (u.email || "").toLowerCase();
+    return users.filter((u) => {
+      const name = (u.name || "").toLowerCase();
+      const email = (u.email || "").toLowerCase();
+      const adminName = (u.admin?.name || "").toLowerCase();
+      const pkgName = (u.packages?.name || "").toLowerCase();
 
-    const adminName = (u.admin?.name || "").toLowerCase();
+      const expirySearch = formatExpiry(u.date).toLowerCase();
+      const statusStr = u.isActive ? "active" : "inactive";
+      const draftStr = u.isDraft ? "draft" : "not draft";
+      const workStr = u.isComplete === false ? "incomplete" : "complete";
 
-    const expirySearch = formatExpiry(u.date).toLowerCase();
+      return (
+        name.includes(q) ||
+        email.includes(q) ||
+        adminName.includes(q) ||
+        pkgName.includes(q) ||
+        expirySearch.includes(q) ||
+        statusStr.includes(q) ||
+        draftStr.includes(q) ||
+        workStr.includes(q)
+      );
+    });
+  }, [users, searchTerm]);
 
-    return (
-      name.includes(q) ||
-      email.includes(q) ||
-      adminName.includes(q) || 
-      expirySearch.includes(q)
-    );
-  });
+  const sortedUsers = useMemo(() => sortUsers(filteredUsers), [filteredUsers, sortField, sortOrder]);
 
-
-
+  // -------------------- pagination --------------------
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const sortedUsers = sortUsers(filteredUsers);
   const currentItems = sortedUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
 
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
+  // -------------------- export --------------------
   const exportToExcel = () => {
     const data = filteredUsers.map((u, i) => ({
       "Sr No.": i + 1,
@@ -155,8 +197,9 @@ function MuComp() {
       Email: u.email,
       Password: u.password,
       Status: u.isActive ? "Active" : "Inactive",
+      Work: u.isComplete === false ? "Incomplete" : "Complete",
       Draft: u.isDraft ? "Yes" : "No",
-      "Expiry Date": new Date(u.date).toLocaleDateString(),
+      "Expiry Date": u.date ? new Date(u.date).toLocaleDateString() : "-",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -177,6 +220,7 @@ function MuComp() {
       "Email",
       "Password",
       "Status",
+      "Work",
       "Draft",
       "Expiry Date",
     ];
@@ -189,8 +233,9 @@ function MuComp() {
       u.email,
       u.password,
       u.isActive ? "Active" : "Inactive",
+      u.isComplete === false ? "Incomplete" : "Complete",
       u.isDraft ? "Yes" : "No",
-      new Date(u.date).toLocaleDateString(),
+      u.date ? new Date(u.date).toLocaleDateString() : "-",
     ]);
 
     autoTable(doc, {
@@ -214,10 +259,7 @@ function MuComp() {
 
           <div style={{ display: "flex", gap: 10 }}>
             {role === "superadmin" && (
-              <button
-                className="type"
-                onClick={() => navigate("/admin/manage-user/add-user")}
-              >
+              <button className="type" onClick={() => navigate("/admin/manage-user/add-user")}>
                 + Add User
               </button>
             )}
@@ -230,8 +272,8 @@ function MuComp() {
 
         <div className="go">
           <div className="mygo">
-            <p onClick={exportToExcel}>Excel</p>
-            <p onClick={exportToPDF}>PDF</p>
+            <p onClick={exportToExcel} style={{ cursor: "pointer" }}>Excel</p>
+            <p onClick={exportToPDF} style={{ cursor: "pointer" }}>PDF</p>
           </div>
 
           <p
@@ -241,10 +283,11 @@ function MuComp() {
               color: "White",
               padding: "10px 20px",
               borderRadius: "10px",
+              userSelect: "none",
             }}
             onClick={() => {
               setSortField("expiry");
-              setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+              setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
               setCurrentPage(1);
             }}
           >
@@ -254,7 +297,7 @@ function MuComp() {
           <input
             type="text"
             className="search"
-            placeholder="Search by name or email or expiry"
+            placeholder="Search name / email / admin / package / status / draft / work / expiry..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -274,6 +317,7 @@ function MuComp() {
                 <th>Email Id</th>
                 <th>Password</th>
                 <th>Status</th>
+                <th>Work</th>
                 <th>Goal Status</th>
                 <th>Expiry Date</th>
                 <th>Action</th>
@@ -293,13 +337,17 @@ function MuComp() {
 
                     <td>
                       {u.isActive ? (
-                        <span style={{ color: "green", fontWeight: "bold" }}>
-                          Active
-                        </span>
+                        <span style={{ color: "green", fontWeight: "bold" }}>Active</span>
                       ) : (
-                        <span style={{ color: "red", fontWeight: "bold" }}>
-                          Inactive
-                        </span>
+                        <span style={{ color: "red", fontWeight: "bold" }}>Inactive</span>
+                      )}
+                    </td>
+
+                    <td>
+                      {u.isComplete === false ? (
+                        <span style={{ color: "#b91c1c", fontWeight: "bold" }}>Incomplete</span>
+                      ) : (
+                        <span style={{ color: "#065f46", fontWeight: "bold" }}>Complete</span>
                       )}
                     </td>
 
@@ -312,8 +360,7 @@ function MuComp() {
                         : 100}
                     </td>
 
-
-                    <td>{new Date(u.date).toLocaleDateString()}</td>
+                    <td>{u.date ? new Date(u.date).toLocaleDateString() : "-"}</td>
 
                     <td className="mybtnnns">
                       {role === "superadmin" && (
@@ -329,32 +376,22 @@ function MuComp() {
                             Edit
                           </button>
 
-                          <button
-                            className="delete"
-                            onClick={() => handleDelete(u._id)}
-                          >
+                          <button className="delete" onClick={() => handleDelete(u._id)}>
                             Delete
                           </button>
                         </>
                       )}
 
                       {u.isActive ? (
-                        <button
-                          className="inactive"
-                          onClick={() => handleDeactivate(u._id)}
-                        >
+                        <button className="inactive" onClick={() => handleDeactivate(u._id)}>
                           Deactivate
                         </button>
                       ) : (
-                        <button
-                          className="active"
-                          onClick={() => handleActivate(u._id)}
-                        >
+                        <button className="active" onClick={() => handleActivate(u._id)}>
                           Activate
                         </button>
                       )}
 
-                      {/* ✅ Draft Toggle UI */}
                       {u.isDraft ? (
                         <button
                           className="inactive"
@@ -364,11 +401,19 @@ function MuComp() {
                           In Draft
                         </button>
                       ) : (
-                        <button
-                          className="active"
-                          onClick={() => handleAddToDraft(u._id)}
-                        >
+                        <button className="active" onClick={() => handleAddToDraft(u._id)}>
                           Add To Draft
+                        </button>
+                      )}
+
+                      {/* ✅ Mark Complete / Incomplete */}
+                      {u.isComplete === false ? (
+                        <button className="active" onClick={() => handleMarkComplete(u._id)}>
+                          Mark Complete
+                        </button>
+                      ) : (
+                        <button className="inactive" onClick={() => handleMarkIncomplete(u._id)}>
+                          Mark Incomplete
                         </button>
                       )}
 
@@ -387,7 +432,7 @@ function MuComp() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="10" style={{ textAlign: "center", color: "gray" }}>
+                  <td colSpan="11" style={{ textAlign: "center", color: "gray" }}>
                     No users found
                   </td>
                 </tr>
@@ -396,31 +441,22 @@ function MuComp() {
           </table>
         </div>
 
-        {filteredUsers.length > 0 && (
+        {sortedUsers.length > 0 && (
           <div className="pagination-container">
             <div className="pagination">
               <button onClick={() => goToPage(1)} disabled={currentPage === 1}>
                 «
               </button>
-              <button
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
+              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
                 ‹
               </button>
               <span>
                 Page {currentPage} of {totalPages}
               </span>
-              <button
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
+              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
                 ›
               </button>
-              <button
-                onClick={() => goToPage(totalPages)}
-                disabled={currentPage === totalPages}
-              >
+              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>
                 »
               </button>
             </div>

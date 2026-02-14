@@ -33,15 +33,15 @@ exports.getpackages = async(req, res) => {
     }
 }
 
-exports.getpackagesNames = async(req,res) => {
-    try{
-        const packageNames = await Packages.find().select('name');
-        res.status(200).json(packageNames);
-    }
-    catch(err){
-        return res.status(500).json({ message: err.message });
-    }
-}
+exports.getpackagesNames = async (req, res) => {
+  try {
+    const packageNames = await Packages.find().select("name price"); // ✅ include price
+    res.status(200).json(packageNames);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 
 exports.editpackages = async(req,res) => {
     try{

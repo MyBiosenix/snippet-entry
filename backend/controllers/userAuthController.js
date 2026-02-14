@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Snippet = require('../models/Snippet');
 const Packages = require('../models/Package');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 exports.login = async (req, res) => {
   try {
@@ -63,6 +64,14 @@ exports.logout = async (req, res) => {
 exports.createUser = async (req, res) => {
   try {
     const { name, email, mobile, admin, packages, price, paymentoptions, date } = req.body;
+
+    if (!date) return res.status(400).json({ message: "Expiry date/time is required" });
+
+    const expiryDate = new Date(date);
+    if (isNaN(expiryDate.getTime())) {
+      return res.status(400).json({ message: "Invalid expiry date/time" });
+    }
+
     const password = getRandomPassword();
 
     const existingUser = await User.findOne({ email });
@@ -71,10 +80,7 @@ exports.createUser = async (req, res) => {
     }
 
     const allSnippets = await Snippet.find({}, "_id");
-
-    const shuffled = allSnippets
-      .map(s => s._id)
-      .sort(() => Math.random() - 0.5);
+    const shuffled = allSnippets.map((s) => s._id).sort(() => Math.random() - 0.5);
 
     const newUser = await User.create({
       name,
@@ -84,10 +90,10 @@ exports.createUser = async (req, res) => {
       packages,
       price,
       paymentoptions,
-      date,
-      password: password,
+      date: expiryDate,       // ✅ store as Date object
+      password,
       snippetOrder: shuffled,
-      currentIndex: 0
+      currentIndex: 0,
     });
 
     res.status(200).json({
@@ -100,29 +106,32 @@ exports.createUser = async (req, res) => {
         packages: newUser.packages,
         price: newUser.price,
         paymentoptions: newUser.paymentoptions,
-        date: newUser.date,
-        password: newUser.password
-      }
+        date: newUser.date, // expiry datetime
+        password: newUser.password,
+      },
     });
-
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+
 exports.getUsers = async (req, res) => {
   try {
     const allUsers = await User.find()
-      .select("name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages") // ✅ only needed
+      .select(
+        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt"
+      )
       .populate("admin", "name")
       .populate("packages", "name pages")
-      .lean(); // ✅ faster
+      .lean();
 
     res.status(200).json(allUsers);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 function getRandomPassword(length = 7){
@@ -187,31 +196,47 @@ exports.deleteUser = async(req,res) => {
     }
 }
 
-exports.editUser = async(req,res) => {
-    try{
-        const {id} = req.params;
-        const {name, email,mobile,admin,packages,price,paymentoptions,date} = req.body;
+exports.editUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, mobile, admin, packages, price, paymentoptions, date } = req.body;
 
-        const user = await User.findById(id);
-        if(!user){
-            return res.status(400).json({ message: 'User does not Exist'});
-        }
-        user.name = name;
-        user.email = email;
-        user.mobile = mobile;
-        user.admin = admin;
-        user.packages = packages;
-        user.price = price;
-        user.paymentoptions = paymentoptions;
-        user.date = date;
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(400).json({ message: "User does not Exist" });
+    }
 
-        await user.save();
-        res.status(200).json({message:'User Updated Succesfully'});
+    if (!date) return res.status(400).json({ message: "Expiry date/time is required" });
+
+    const expiryDate = new Date(date);
+    if (isNaN(expiryDate.getTime())) {
+      return res.status(400).json({ message: "Invalid expiry date/time" });
     }
-    catch(err){
-        res.status(400).json(err.message);
+
+    // Optional: email uniqueness check on edit
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser && String(existingUser._id) !== String(user._id)) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
     }
-}
+
+    user.name = name;
+    user.email = email;
+    user.mobile = mobile;
+    user.admin = admin;
+    user.packages = packages;
+    user.price = price;
+    user.paymentoptions = paymentoptions;
+    user.date = expiryDate; // ✅ store Date object
+
+    await user.save();
+    res.status(200).json({ message: "User Updated Successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 exports.addToDrafts = async(req,res) => {
   try{
@@ -345,7 +370,49 @@ exports.fetchStats = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+exports.markUserIncomplete = async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const u = await User.findByIdAndUpdate(
+      id,
+      { isComplete: false },
+      { new: true }
+    ).select("-password");
+
+    if (!u) return res.status(404).json({ message: "User not found" });
+
+    return res.status(200).json({ message: "User marked as Incomplete", user: u });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.markUserComplete = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const u = await User.findByIdAndUpdate(
+      id,
+      { isComplete: true },
+      { new: true }
+    ).select("-password");
+
+    if (!u) return res.status(404).json({ message: "User not found" });
+
+    return res.status(200).json({ message: "User marked as Complete", user: u });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 exports.getExpiringSoonUsers = async(req,res) => {
   try{
@@ -414,3 +481,32 @@ exports.targetsAchieved = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.declareResult = async(req,res) => {
+  try {
+    const { userId } = req.params;
+    const declared = typeof req.body.declared === "boolean" ? req.body.declared : true;
+
+    const update = {
+      isDeclared: declared,
+      declaredAt: declared ? new Date() : null,
+    };
+
+    const user = await User.findByIdAndUpdate(userId, update, {
+      new: true,
+      runValidators: true,
+      select: "isDeclared declaredAt",
+    });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    return res.json({
+      message: declared ? "Result declared successfully" : "Result hidden successfully",
+      isDeclared: user.isDeclared,
+      declaredAt: user.declaredAt,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+}

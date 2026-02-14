@@ -48,11 +48,13 @@ const UserSchema = new mongoose.Schema({
   snippetOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: "Snippets" }],
   currentIndex: { type: Number, default: 0 },
 
-  reportDeclared:{
-        type: Boolean,
-        default: false,
-        index: true
-  }
+  isDeclared: { type: Boolean, default: false },
+  declaredAt: { type: Date, default: null },
+  isComplete: {
+    type: Boolean,
+    default: true,  // so old users won't break
+    index: true,
+  },
 });
 
 module.exports = mongoose.model("User", UserSchema);

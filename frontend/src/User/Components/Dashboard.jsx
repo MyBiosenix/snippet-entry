@@ -1,30 +1,46 @@
-import React, { useEffect, useState } from 'react';
-import '../Styles/dashboard.css';
-import { MdSubscriptions, MdOutlineTrackChanges } from 'react-icons/md';
-import { FaBullseye, FaChartLine } from 'react-icons/fa';
-import axios from '../utils/axiosInstance';
-import { useNavigate } from 'react-router-dom'
+// User Dashboard.jsx (UPDATED)
+import React, { useEffect, useState } from "react";
+import "../Styles/dashboard.css";
+import { MdSubscriptions, MdOutlineTrackChanges } from "react-icons/md";
+import { FaBullseye, FaChartLine } from "react-icons/fa";
+import axios from "../utils/axiosInstance";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
-
   const [timeLeft, setTimeLeft] = useState("");
 
   const navigate = useNavigate();
 
+  const formatDateTimeIN = (v) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return "-";
+
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const userId = localStorage.getItem('userId');
-        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem("userId");
+        const token = localStorage.getItem("token");
+
         if (!userId) {
           setError("No user ID found in localStorage");
           return;
         }
 
         const res = await axios.get(`/auth/${userId}/dash-stats`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         setStats(res.data);
@@ -43,9 +59,11 @@ function Dashboard() {
     const pad = (n) => String(n).padStart(2, "0");
 
     const compute = () => {
-
       const expiry = new Date(stats.validTill);
-      expiry.setHours(23, 59, 59, 999);
+      if (isNaN(expiry.getTime())) {
+        setTimeLeft("-");
+        return;
+      }
 
       const now = new Date();
       const diff = expiry.getTime() - now.getTime();
@@ -66,54 +84,50 @@ function Dashboard() {
 
     compute();
     const interval = setInterval(compute, 1000);
-
     return () => clearInterval(interval);
   }, [stats?.validTill]);
 
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!stats) return <p className='load'>Loading dashboard...</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (!stats) return <p className="load">Loading dashboard...</p>;
 
   return (
-    <div className='dashboard'>
+    <div className="dashboard">
       <h3>Dashboard</h3>
 
-      <div className='indash'>
-        <div className='dash' onClick={() => navigate('/profile')}>
+      <div className="indash">
+        <div className="dash" onClick={() => navigate("/profile")}>
           <h4>Plan</h4>
-          <MdSubscriptions className='dashicon' />
+          <MdSubscriptions className="dashicon" />
           <h5>{stats.package}</h5>
           <p>Data Conversion</p>
         </div>
 
-        <div className='dash' onClick={() => navigate('/work')}>
+        <div className="dash" onClick={() => navigate("/work")}>
           <h4>Goal</h4>
-          <FaBullseye className='dashicon' />
+          <FaBullseye className="dashicon" />
           <h5>{stats.goal}</h5>
           <p>Pages</p>
         </div>
 
-        <div className='dash' onClick={() => navigate('/view')}>
+        <div className="dash" onClick={() => navigate("/view")}>
           <h4>Goal Status</h4>
-          <MdOutlineTrackChanges className='dashicon' />
+          <MdOutlineTrackChanges className="dashicon" />
           <h5>{stats.completed}</h5>
           <p>Done</p>
         </div>
 
-        <div className='dash' onClick={() => navigate('/report')}>
+        {/* ✅ Keep navigation same. Message will be shown on /report page only */}
+        <div className="dash" onClick={() => navigate("/report")}>
           <h4>Report</h4>
-          <FaChartLine className='dashicon' />
+          <FaChartLine className="dashicon" />
           <h5>See Results</h5>
           <p>Under Review</p>
         </div>
       </div>
 
-      <p className='valid'>
-        Subscription Validity: {new Date(stats.validTill).toLocaleDateString('en-GB')}
-      </p>
+      <p className="valid">Subscription Validity: {formatDateTimeIN(stats.validTill)}</p>
 
-      <p className={`timer ${timeLeft === "Expired" ? "expired" : ""}`}>
-        Time Left: {timeLeft}
-      </p>
+      <p className={`timer ${timeLeft === "Expired" ? "expired" : ""}`}>Time Left: {timeLeft}</p>
     </div>
   );
 }
