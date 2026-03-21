@@ -6,15 +6,23 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const dropItemStyle = {
+  padding: "9px 16px",
+  cursor: "pointer",
+  fontSize: 13,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  userSelect: "none",
+  whiteSpace: "nowrap",
+};
+
 const formatExpiry = (dateVal) => {
   if (!dateVal) return "";
   const d = new Date(dateVal);
   if (isNaN(d.getTime())) return "";
-
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-
   return [
     `${dd}/${mm}/${yyyy}`,
     `${dd}-${mm}-${yyyy}`,
@@ -29,21 +37,31 @@ function MuComp() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
+  const [openActionDropdown, setOpenActionDropdown] = useState(null);
 
   const itemsPerPage = 10;
-
   const admin = JSON.parse(localStorage.getItem("admin") || "{}");
   const role = admin?.role;
+
+  // ── close dropdown on outside click ──
+  useEffect(() => {
+    const handleClickOutside = () => setOpenActionDropdown(null);
+    if (openActionDropdown) {
+      document.addEventListener("click", handleClickOutside);
+    }
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [openActionDropdown]);
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
   const patchUserInState = (id, patch) => {
-    setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, ...patch } : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u._id === id ? { ...u, ...patch } : u))
+    );
   };
 
   const fetchUsers = async () => {
@@ -55,7 +73,7 @@ function MuComp() {
     }
   };
 
-  // -------------------- activate/deactivate --------------------
+  // ── activate/deactivate ──
   const handleActivate = async (id) => {
     try {
       await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
@@ -74,7 +92,7 @@ function MuComp() {
     }
   };
 
-  // -------------------- drafts --------------------
+  // ── drafts ──
   const handleAddToDraft = async (id) => {
     try {
       await axios.put(`https://api.freelancing-project.com/api/auth/${id}/add-to-drafts`);
@@ -93,39 +111,82 @@ function MuComp() {
     }
   };
 
-  // -------------------- ✅ mark complete/incomplete --------------------
+  // ── work status ──
   const handleMarkIncomplete = async (id) => {
-
-    const prevUsers = users; // rollback backup
-    patchUserInState(id, { isComplete: false }); // optimistic
-
+    const prev = users;
+    patchUserInState(id, { isComplete: false });
     try {
-      // ✅ using PUT (more compatible)
       await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-incomplete`);
+      setOpenActionDropdown(null);
     } catch (err) {
-      setUsers(prevUsers); // rollback
+      setUsers(prev);
       alert(err.response?.data?.message || err.message);
     }
   };
 
   const handleMarkComplete = async (id) => {
-
-    const prevUsers = users; // rollback backup
-    patchUserInState(id, { isComplete: true }); // optimistic
-
+    const prev = users;
+    patchUserInState(id, { isComplete: true });
     try {
-      // ✅ using PUT (more compatible)
       await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-complete`);
+      setOpenActionDropdown(null);
     } catch (err) {
-      setUsers(prevUsers); // rollback
+      setUsers(prev);
       alert(err.response?.data?.message || err.message);
     }
   };
 
-  // -------------------- delete --------------------
+  const handleMarkSoftwareUsed = async (id) => {
+    const prev = users;
+    patchUserInState(id, { softwareUsed: true });
+    try {
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-software-used`);
+      setOpenActionDropdown(null);
+    } catch (err) {
+      setUsers(prev);
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleUnmarkSoftwareUsed = async (id) => {
+    const prev = users;
+    patchUserInState(id, { softwareUsed: false });
+    try {
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/unmark-software-used`);
+      setOpenActionDropdown(null);
+    } catch (err) {
+      setUsers(prev);
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleMarkNotInSequence = async (id) => {
+    const prev = users;
+    patchUserInState(id, { notInSequence: true });
+    try {
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-not-in-sequence`);
+      setOpenActionDropdown(null);
+    } catch (err) {
+      setUsers(prev);
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleUnmarkNotInSequence = async (id) => {
+    const prev = users;
+    patchUserInState(id, { notInSequence: false });
+    try {
+      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/unmark-not-in-sequence`);
+      setOpenActionDropdown(null);
+    } catch (err) {
+      setUsers(prev);
+      alert(err.response?.data?.message || err.message);
+    }
+  };
+
+  // ── delete ──
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
-
     try {
       await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
       fetchUsers();
@@ -134,7 +195,7 @@ function MuComp() {
     }
   };
 
-  // -------------------- sort --------------------
+  // ── sort ──
   const sortUsers = (data) => {
     if (sortField === "expiry") {
       return [...data].sort((a, b) => {
@@ -146,7 +207,7 @@ function MuComp() {
     return data;
   };
 
-  // -------------------- filter/search --------------------
+  // ── filter ──
   const filteredUsers = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return users;
@@ -156,11 +217,12 @@ function MuComp() {
       const email = (u.email || "").toLowerCase();
       const adminName = (u.admin?.name || "").toLowerCase();
       const pkgName = (u.packages?.name || "").toLowerCase();
-
       const expirySearch = formatExpiry(u.date).toLowerCase();
       const statusStr = u.isActive ? "active" : "inactive";
       const draftStr = u.isDraft ? "draft" : "not draft";
       const workStr = u.isComplete === false ? "incomplete" : "complete";
+      const swStr = u.softwareUsed ? "software used" : "";
+      const seqStr = u.notInSequence ? "not in sequence" : "";
 
       return (
         name.includes(q) ||
@@ -170,14 +232,19 @@ function MuComp() {
         expirySearch.includes(q) ||
         statusStr.includes(q) ||
         draftStr.includes(q) ||
-        workStr.includes(q)
+        workStr.includes(q) ||
+        swStr.includes(q) ||
+        seqStr.includes(q)
       );
     });
   }, [users, searchTerm]);
 
-  const sortedUsers = useMemo(() => sortUsers(filteredUsers), [filteredUsers, sortField, sortOrder]);
+  const sortedUsers = useMemo(
+    () => sortUsers(filteredUsers),
+    [filteredUsers, sortField, sortOrder]
+  );
 
-  // -------------------- pagination --------------------
+  // ── pagination ──
   const totalPages = Math.ceil(sortedUsers.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -187,7 +254,7 @@ function MuComp() {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
-  // -------------------- export --------------------
+  // ── export ──
   const exportToExcel = () => {
     const data = filteredUsers.map((u, i) => ({
       "Sr No.": i + 1,
@@ -198,10 +265,11 @@ function MuComp() {
       Password: u.password,
       Status: u.isActive ? "Active" : "Inactive",
       Work: u.isComplete === false ? "Incomplete" : "Complete",
+      "Software Used": u.softwareUsed ? "Yes" : "No",
+      "Not In Sequence": u.notInSequence ? "Yes" : "No",
       Draft: u.isDraft ? "Yes" : "No",
       "Expiry Date": u.date ? new Date(u.date).toLocaleDateString() : "-",
     }));
-
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
@@ -211,20 +279,10 @@ function MuComp() {
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("Users List", 14, 15);
-
     const tableColumn = [
-      "Sr No.",
-      "Name",
-      "Admin",
-      "Package",
-      "Email",
-      "Password",
-      "Status",
-      "Work",
-      "Draft",
-      "Expiry Date",
+      "Sr No.", "Name", "Admin", "Package", "Email",
+      "Password", "Status", "Work", "Draft", "Expiry Date",
     ];
-
     const tableRows = filteredUsers.map((u, i) => [
       i + 1,
       u.name,
@@ -237,7 +295,6 @@ function MuComp() {
       u.isDraft ? "Yes" : "No",
       u.date ? new Date(u.date).toLocaleDateString() : "-",
     ]);
-
     autoTable(doc, {
       startY: 25,
       head: [tableColumn],
@@ -245,10 +302,10 @@ function MuComp() {
       theme: "grid",
       headStyles: { fillColor: [41, 128, 185] },
     });
-
     doc.save("UsersList.pdf");
   };
 
+  // ── render ──
   return (
     <div className="comp">
       <h3>Manage Users</h3>
@@ -256,14 +313,15 @@ function MuComp() {
       <div className="incomp">
         <div className="go">
           <h4>All Users List</h4>
-
           <div style={{ display: "flex", gap: 10 }}>
             {role === "superadmin" && (
-              <button className="type" onClick={() => navigate("/admin/manage-user/add-user")}>
+              <button
+                className="type"
+                onClick={() => navigate("/admin/manage-user/add-user")}
+              >
                 + Add User
               </button>
             )}
-
             <button className="type" onClick={() => navigate("/admin/drafts")}>
               Drafts
             </button>
@@ -275,15 +333,10 @@ function MuComp() {
             <p onClick={exportToExcel} style={{ cursor: "pointer" }}>Excel</p>
             <p onClick={exportToPDF} style={{ cursor: "pointer" }}>PDF</p>
           </div>
-
           <p
             style={{
-              cursor: "pointer",
-              background: "#2575fc",
-              color: "White",
-              padding: "10px 20px",
-              borderRadius: "10px",
-              userSelect: "none",
+              cursor: "pointer", background: "#2575fc", color: "white",
+              padding: "10px 20px", borderRadius: "10px", userSelect: "none",
             }}
             onClick={() => {
               setSortField("expiry");
@@ -293,16 +346,12 @@ function MuComp() {
           >
             Expiry: {sortOrder === "asc" ? "↑" : "↓"}
           </p>
-
           <input
             type="text"
             className="search"
             placeholder="Search name / email / admin / package / status / draft / work / expiry..."
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
 
@@ -343,12 +392,30 @@ function MuComp() {
                       )}
                     </td>
 
+                    {/* ── Work column — shows all flags ── */}
                     <td>
-                      {u.isComplete === false ? (
-                        <span style={{ color: "#b91c1c", fontWeight: "bold" }}>Incomplete</span>
-                      ) : (
-                        <span style={{ color: "#065f46", fontWeight: "bold" }}>Complete</span>
-                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {u.isComplete === false && (
+                          <span style={{ color: "#b91c1c", fontWeight: "bold", fontSize: 12 }}>
+                            Incomplete
+                          </span>
+                        )}
+                        {u.softwareUsed && (
+                          <span style={{ color: "#7c3aed", fontWeight: "bold", fontSize: 12 }}>
+                            Software Used
+                          </span>
+                        )}
+                        {u.notInSequence && (
+                          <span style={{ color: "#d97706", fontWeight: "bold", fontSize: 12 }}>
+                            Not In Sequence
+                          </span>
+                        )}
+                        {u.isComplete !== false && !u.softwareUsed && !u.notInSequence && (
+                          <span style={{ color: "#065f46", fontWeight: "bold", fontSize: 12 }}>
+                            Complete
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td>
@@ -375,7 +442,6 @@ function MuComp() {
                           >
                             Edit
                           </button>
-
                           <button className="delete" onClick={() => handleDelete(u._id)}>
                             Delete
                           </button>
@@ -406,16 +472,102 @@ function MuComp() {
                         </button>
                       )}
 
-                      {/* ✅ Mark Complete / Incomplete */}
-                      {u.isComplete === false ? (
-                        <button className="active" onClick={() => handleMarkComplete(u._id)}>
-                          Mark Complete
+                      {/* ── Work Status Dropdown ── */}
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ position: "relative", display: "inline-block" }}
+                      >
+                        <button
+                          className="inactive"
+                          onClick={() =>
+                            setOpenActionDropdown(
+                              openActionDropdown === u._id ? null : u._id
+                            )
+                          }
+                        >
+                          Work Status ▾
                         </button>
-                      ) : (
-                        <button className="inactive" onClick={() => handleMarkIncomplete(u._id)}>
-                          Mark Incomplete
-                        </button>
-                      )}
+
+                        {openActionDropdown === u._id && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "110%",
+                              left: 0,
+                              zIndex: 999,
+                              background: "#fff",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: 8,
+                              boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
+                              minWidth: 200,
+                              padding: "4px 0",
+                            }}
+                          >
+                            {/* Mark Incomplete / Complete */}
+                            {u.isComplete === false ? (
+                              <div
+                                style={dropItemStyle}
+                                onClick={() => handleMarkComplete(u._id)}
+                              >
+                                ✅ Mark Complete
+                              </div>
+                            ) : (
+                              <div
+                                style={dropItemStyle}
+                                onClick={() => handleMarkIncomplete(u._id)}
+                              >
+                                ⚠️ Mark Incomplete
+                              </div>
+                            )}
+
+                            {/* Software Used */}
+                            {u.softwareUsed ? (
+                              <div
+                                style={dropItemStyle}
+                                onClick={() => handleUnmarkSoftwareUsed(u._id)}
+                              >
+                                🔓 Unmark Software Used
+                              </div>
+                            ) : (
+                              <div
+                                style={dropItemStyle}
+                                onClick={() => handleMarkSoftwareUsed(u._id)}
+                              >
+                                💻 Mark Software Used
+                              </div>
+                            )}
+
+                            {/* Not In Sequence */}
+                            {u.notInSequence ? (
+                              <div
+                                style={dropItemStyle}
+                                onClick={() => handleUnmarkNotInSequence(u._id)}
+                              >
+                                🔓 Unmark Not In Sequence
+                              </div>
+                            ) : (
+                              <div
+                                style={dropItemStyle}
+                                onClick={() => handleMarkNotInSequence(u._id)}
+                              >
+                                🔀 Mark Not In Sequence
+                              </div>
+                            )}
+
+                            <div
+                              style={{
+                                ...dropItemStyle,
+                                color: "#9ca3af",
+                                fontSize: 12,
+                                borderBottom: "none",
+                              }}
+                              onClick={() => setOpenActionDropdown(null)}
+                            >
+                              ✕ Close
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
                       <button
                         className="report"
@@ -444,21 +596,11 @@ function MuComp() {
         {sortedUsers.length > 0 && (
           <div className="pagination-container">
             <div className="pagination">
-              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>
-                «
-              </button>
-              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
-                ‹
-              </button>
-              <span>
-                Page {currentPage} of {totalPages}
-              </span>
-              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
-                ›
-              </button>
-              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>
-                »
-              </button>
+              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>«</button>
+              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>‹</button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
+              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>»</button>
             </div>
           </div>
         )}

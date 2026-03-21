@@ -55,6 +55,16 @@ const UserSchema = new mongoose.Schema({
     default: true,  // so old users won't break
     index: true,
   },
+  softwareUsed: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  notInSequence: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
 });
 
 module.exports = mongoose.model("User", UserSchema);

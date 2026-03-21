@@ -120,7 +120,7 @@ exports.getUsers = async (req, res) => {
   try {
     const allUsers = await User.find()
       .select(
-        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt"
+        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence"
       )
       .populate("admin", "name")
       .populate("packages", "name pages")
@@ -311,18 +311,18 @@ exports.changePassword = async(req,res) => {
     }
 }
 
-exports.getUser = async(req,res) => {
-    try{
-        const {id} = req.params;
-        const user = await User.findById(id)
-            .populate('admin','name')
-            .populate('packages','name');
-        res.status(200).json(user);
-    }
-    catch(err){
-        res.status(500).json(err.message);
-    }
-}
+exports.getUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id)
+      .populate("admin", "name")
+      .populate("packages", "name");
+    // lean() not needed — mongoose doc is fine
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json(err.message);
+  }
+};
 
 exports.fetchStats = async (req, res) => {
   try {
@@ -409,6 +409,81 @@ exports.markUserComplete = async (req, res) => {
     if (!u) return res.status(404).json({ message: "User not found" });
 
     return res.status(200).json({ message: "User marked as Complete", user: u });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+exports.markSoftwareUsed = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: "Invalid user id" });
+
+    const u = await User.findByIdAndUpdate(
+      id,
+      { softwareUsed: true },
+      { new: true }
+    ).select("-password");
+
+    if (!u) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "Marked as Software Used", user: u });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.unmarkSoftwareUsed = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: "Invalid user id" });
+
+    const u = await User.findByIdAndUpdate(
+      id,
+      { softwareUsed: false },
+      { new: true }
+    ).select("-password");
+
+    if (!u) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "Software Used unmarked", user: u });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.markNotInSequence = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: "Invalid user id" });
+
+    const u = await User.findByIdAndUpdate(
+      id,
+      { notInSequence: true },
+      { new: true }
+    ).select("-password");
+
+    if (!u) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "Marked as Not In Sequence", user: u });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.unmarkNotInSequence = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: "Invalid user id" });
+
+    const u = await User.findByIdAndUpdate(
+      id,
+      { notInSequence: false },
+      { new: true }
+    ).select("-password");
+
+    if (!u) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "Not In Sequence unmarked", user: u });
   } catch (err) {
     return res.status(500).json({ message: "Server error" });
   }

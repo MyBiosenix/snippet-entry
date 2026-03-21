@@ -1,7 +1,10 @@
 const express = require("express");
 const router = express.Router();
 
-const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts,declareResult,markUserComplete,markUserIncomplete} = require('../controllers/userAuthController');
+const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts,declareResult,markUserComplete,markUserIncomplete,markSoftwareUsed,
+  unmarkSoftwareUsed,
+  markNotInSequence,
+  unmarkNotInSequence,} = require('../controllers/userAuthController');
 
 const { checkActiveUser } = require('../middleware/checkActiveUser');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -23,6 +26,10 @@ router.patch('/declare-result/:userId',declareResult);
 
 router.put('/:id/mark-incomplete',markUserIncomplete);
 router.put('/:id/mark-complete',markUserComplete);
+router.put('/:id/mark-software-used', markSoftwareUsed);
+router.put('/:id/unmark-software-used', unmarkSoftwareUsed);
+router.put('/:id/mark-not-in-sequence', markNotInSequence);
+router.put('/:id/unmark-not-in-sequence', unmarkNotInSequence);
 
 
 

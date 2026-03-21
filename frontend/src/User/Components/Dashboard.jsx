@@ -1,4 +1,3 @@
-// User Dashboard.jsx (UPDATED)
 import React, { useEffect, useState } from "react";
 import "../Styles/dashboard.css";
 import { MdSubscriptions, MdOutlineTrackChanges } from "react-icons/md";
@@ -10,6 +9,10 @@ function Dashboard() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [timeLeft, setTimeLeft] = useState("");
+  const [softwareUsed, setSoftwareUsed] = useState(false);
+  const [notInSequence, setNotInSequence] = useState(false);
+  const [isComplete, setIsComplete] = useState(true);
+  const [isDeclared, setIsDeclared] = useState(false);
 
   const navigate = useNavigate();
 
@@ -17,75 +20,74 @@ function Dashboard() {
     if (!v) return "-";
     const d = new Date(v);
     if (isNaN(d.getTime())) return "-";
-
     return d.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "numeric", minute: "2-digit", hour12: true,
     });
   };
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAll = async () => {
       try {
         const userId = localStorage.getItem("userId");
         const token = localStorage.getItem("token");
+        if (!userId) { setError("No user ID found"); return; }
 
-        if (!userId) {
-          setError("No user ID found in localStorage");
-          return;
-        }
+        // fetch dash stats + user flags in parallel
+        const [statsRes, userRes] = await Promise.all([
+          axios.get(`/auth/${userId}/dash-stats`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`/auth/${userId}/user`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }),
+        ]);
 
-        const res = await axios.get(`/auth/${userId}/dash-stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        setStats(res.data);
+        setStats(statsRes.data);
+        setSoftwareUsed(!!userRes.data?.softwareUsed);
+        setNotInSequence(!!userRes.data?.notInSequence);
+        setIsComplete(userRes.data?.isComplete === false ? false : true);
+        setIsDeclared(!!(userRes.data?.isDeclared ?? userRes.data?.reportDeclared));
       } catch (err) {
         console.error(err);
         setError("Error fetching dashboard stats: " + err.message);
       }
     };
 
-    fetchStats();
+    fetchAll();
   }, []);
 
   useEffect(() => {
     if (!stats?.validTill) return;
-
     const pad = (n) => String(n).padStart(2, "0");
-
     const compute = () => {
       const expiry = new Date(stats.validTill);
-      if (isNaN(expiry.getTime())) {
-        setTimeLeft("-");
-        return;
-      }
-
-      const now = new Date();
-      const diff = expiry.getTime() - now.getTime();
-
-      if (diff <= 0) {
-        setTimeLeft("Expired");
-        return;
-      }
-
+      if (isNaN(expiry.getTime())) { setTimeLeft("-"); return; }
+      const diff = expiry.getTime() - new Date().getTime();
+      if (diff <= 0) { setTimeLeft("Expired"); return; }
       const totalSeconds = Math.floor(diff / 1000);
       const days = Math.floor(totalSeconds / (3600 * 24));
       const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const seconds = totalSeconds % 60;
-
       setTimeLeft(`${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
     };
-
     compute();
     const interval = setInterval(compute, 1000);
     return () => clearInterval(interval);
   }, [stats?.validTill]);
+
+  // ── Report card content ──
+  const getReportCardContent = () => {
+    if (!isDeclared)    return { label: "Not Declared",  sub: null };
+    if (softwareUsed)   return { label: "Unavailable",   sub: "Software Used Detected" };
+    if (notInSequence)  return { label: "Unavailable",   sub: "Not In Sequence" };
+    if (!isComplete)    return { label: "Incomplete",    sub: "Work Marked Incomplete" };
+    return { label: "See Results", sub: null };
+  };
+
+  const { label: reportLabel, sub: reportSub } = getReportCardContent();
+  const reportWarning = softwareUsed || notInSequence || !isComplete;
 
   if (error) return <p style={{ color: "red" }}>{error}</p>;
   if (!stats) return <p className="load">Loading dashboard...</p>;
@@ -116,18 +118,28 @@ function Dashboard() {
           <p>Done</p>
         </div>
 
-        {/* ✅ Keep navigation same. Message will be shown on /report page only */}
         <div className="dash" onClick={() => navigate("/report")}>
           <h4>Report</h4>
           <FaChartLine className="dashicon" />
-          <h5>See Results</h5>
-          <p>Under Review</p>
+          <h5 style={{ color: reportWarning ? "#b91c1c" : "inherit" }}>
+            {reportLabel}
+          </h5>
+          {reportSub ? (
+            <p style={{ color: "#b91c1c", fontWeight: 600, fontSize: 11, margin: 0 }}>
+              {reportSub}
+            </p>
+          ) : (
+            <p>Under Review</p>
+          )}
         </div>
       </div>
 
-      <p className="valid">Subscription Validity: {formatDateTimeIN(stats.validTill)}</p>
-
-      <p className={`timer ${timeLeft === "Expired" ? "expired" : ""}`}>Time Left: {timeLeft}</p>
+      <p className="valid">
+        Subscription Validity: {formatDateTimeIN(stats.validTill)}
+      </p>
+      <p className={`timer ${timeLeft === "Expired" ? "expired" : ""}`}>
+        Time Left: {timeLeft}
+      </p>
     </div>
   );
 }
