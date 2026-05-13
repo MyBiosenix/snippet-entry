@@ -1,7 +1,8 @@
 import axios from "axios";
+import { API_BASE } from "../../utils/api";
 
 const axiosInstance = axios.create({
-  baseURL: "https://api.freelancing-project.com/api", 
+  baseURL: API_BASE,
 });
 
 axiosInstance.interceptors.request.use(

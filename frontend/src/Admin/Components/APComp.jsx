@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "../Styles/asa.css";
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from "axios";
+import { API_BASE } from "../../utils/api";
 
 function APComp() {
   const navigate = useNavigate();
@@ -42,14 +43,14 @@ function APComp() {
     try {
       if (packageToEdit) {
         const res = await axios.put(
-          `https://api.freelancing-project.com/api/package/${packageToEdit._id}/edit-package`,
+          `${API_BASE}/package/${packageToEdit._id}/edit-package`,
           { name, price,pages }
         );
         alert(res.data.message || "Package updated successfully");
       } else {
 
         const res = await axios.post(
-          'https://api.freelancing-project.com/api/package/create-package',
+          `${API_BASE}/package/create-package`,
           { name, price, pages }
         );
         alert(res.data.message || "Package added successfully");

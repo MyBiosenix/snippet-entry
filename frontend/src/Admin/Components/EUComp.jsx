@@ -5,6 +5,7 @@ import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { API_BASE } from "../../utils/api";
 
 function EUComp() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ function EUComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('https://api.freelancing-project.com/api/auth/expiring-soon');
+      const res = await axios.get(`${API_BASE}/auth/expiring-soon`);
       setUsers(res.data.users|| []);
     } catch (err) {
       alert(err.response?.data?.message || 'Error fetching users');
@@ -31,7 +32,7 @@ function EUComp() {
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
+      await axios.put(`${API_BASE}/auth/${id}/activate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -40,7 +41,7 @@ function EUComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
+      await axios.put(`${API_BASE}/auth/${id}/deactivate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -50,7 +51,7 @@ function EUComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
+        await axios.delete(`${API_BASE}/auth/${id}/delete`);
         fetchUsers();
       } catch (err) {
         alert(err.response?.data?.message || 'Server error');

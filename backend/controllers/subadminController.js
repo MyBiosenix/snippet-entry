@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const User = require('../models/User');
+const { hasTargetAchieved } = require('../utils/packageRules');
+const env = require('../config/env');
 
 exports.login = async(req,res) => {
     try{
@@ -16,7 +18,7 @@ exports.login = async(req,res) => {
 
         const token = jwt.sign(
             {id:admin._id, role:admin.role},
-            process.env.JWT_SECRET,
+            env.jwtSecret,
             {expiresIn:'1h'}
         )
 
@@ -74,17 +76,9 @@ exports.getDashStats = async (req, res) => {
       .populate("packages")
       .lean();
 
-    const targetsAchievedUsers = users.filter(user => {
-      if (!user.packages) return false;
-
-      const packageName = user.packages.name?.toLowerCase();
-      const currentIndex = user.currentIndex || 0;
-
-      if (packageName === "gold" && currentIndex >= 75) return true;
-      if (["vip", "diamond"].includes(packageName) && currentIndex >= 150) return true;
-
-      return false;
-    });
+    const targetsAchievedUsers = users.filter(user =>
+      user.packages && hasTargetAchieved(user.packages, user.currentIndex)
+    );
 
     /* ---------- RESPONSE ---------- */
     res.status(200).json({

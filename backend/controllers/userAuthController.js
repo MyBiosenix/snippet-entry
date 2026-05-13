@@ -3,6 +3,8 @@ const Snippet = require('../models/Snippet');
 const Packages = require('../models/Package');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const { getPackagePageLimit, hasTargetAchieved } = require('../utils/packageRules');
+const env = require('../config/env');
 
 exports.login = async (req, res) => {
   try {
@@ -24,7 +26,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ id: myuser._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: myuser._id }, env.jwtSecret, { expiresIn: '30d' });
 
     myuser.lastLoginSession = token;
     await myuser.save();
@@ -79,8 +81,17 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ message: "User already Exists" });
     }
 
+    const selectedPackage = await Packages.findById(packages).select("pages");
+    if (!selectedPackage) {
+      return res.status(400).json({ message: "Selected package does not exist" });
+    }
+
     const allSnippets = await Snippet.find({}, "_id");
-    const shuffled = allSnippets.map((s) => s._id).sort(() => Math.random() - 0.5);
+    const snippetLimit = getPackagePageLimit(selectedPackage);
+    const shuffled = allSnippets
+      .map((s) => s._id)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, snippetLimit);
 
     const newUser = await User.create({
       name,
@@ -137,7 +148,7 @@ exports.getUsers = async (req, res) => {
 function getRandomPassword(length = 7){
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&!()';
     let password = '';
-    for(let i = 0; i<= length; i++){
+    for(let i = 0; i < length; i++){
         password += chars.charAt(Math.floor(Math.random()*chars.length))
     }
     return password;
@@ -338,17 +349,7 @@ exports.fetchStats = async (req, res) => {
     }
 
     
-    let goal = 100;
-
-    const packageName = user.packages?.name?.toLowerCase();
-    const pkgPages = user.packages?.pages;
-
-    if (typeof pkgPages === "number" && pkgPages > 0) {
-      goal = pkgPages;
-    } else {
-      if (packageName === "vip" || packageName === "diamond") goal = 200;
-      else goal = 100; 
-    }
+    const goal = getPackagePageLimit(user.packages);
 
     const completed = user.myerrors?.length || 0;
 
@@ -528,22 +529,9 @@ exports.targetsAchieved = async (req, res) => {
       .populate("packages")
       .lean();
 
-    const accomplishedUsers = users.filter(user => {
-      if (!user.packages) return false;
-
-      const packageName = user.packages.name?.toLowerCase();
-      const currentIndex = user.currentIndex || 0;
-
-      if (packageName === "gold" && currentIndex >= 75) {
-        return true;
-      }
-
-      if (["vip", "diamond"].includes(packageName) && currentIndex >= 150) {
-        return true;
-      }
-
-      return false;
-    });
+    const accomplishedUsers = users.filter(user =>
+      user.packages && hasTargetAchieved(user.packages, user.currentIndex)
+    );
 
     res.status(200).json({
       success: true,

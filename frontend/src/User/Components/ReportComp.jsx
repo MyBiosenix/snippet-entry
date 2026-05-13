@@ -4,6 +4,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import "../Styles/reports.css";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../../utils/api";
 
 Modal.setAppElement("#root");
 
@@ -55,7 +56,6 @@ function ReportComp() {
   const userId = localStorage.getItem("userId");
   const token = localStorage.getItem("token");
 
-  const API_BASE = "https://api.freelancing-project.com/api";
   const AUTH_BASE = `${API_BASE}/auth`;
   const SNIPPET_BASE = `${API_BASE}/snippet`;
 

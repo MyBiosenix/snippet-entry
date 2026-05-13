@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "../Styles/profile.css";
 import axios from "axios";
+import { API_BASE } from "../../utils/api";
 
 function ProfileComp() {
   const id = localStorage.getItem("userId");
@@ -10,7 +11,7 @@ function ProfileComp() {
   const getUser = async () => {
     try {
       const res = await axios.get(
-        `https://api.freelancing-project.com/api/auth/${id}/user`,
+        `${API_BASE}/auth/${id}/user`,
         token
           ? { headers: { Authorization: `Bearer ${token}` } }
           : undefined

@@ -8,35 +8,37 @@ const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser,
 
 const { checkActiveUser } = require('../middleware/checkActiveUser');
 const authMiddleware = require('../middleware/authMiddleware');
+const { protectAdmin } = require('../middleware/protectAdmin');
+const requireSelf = require('../middleware/requireSelf');
 
-router.post('/create-user',createUser);
+router.post('/create-user',protectAdmin,createUser);
 router.post('/login',login);
 router.post('/logout',authMiddleware,logout)
-router.get('/all-users',getUsers);
-router.put('/:id/activate',activateUser);
-router.put('/:id/deactivate',deactivateUser);
-router.get('/active-users',getActiveUsers);
-router.get('/inactive-users',getInActiveUsers);
-router.delete('/:id/delete',deleteUser);
-router.put('/:id/edit-user',editUser);
-router.put('/:id/add-to-drafts',addToDrafts);
-router.put('/:id/remove-from-drafts',removeDrafts);
-router.get('/get-drafts',getDrafts);
-router.patch('/declare-result/:userId',declareResult);
+router.get('/all-users',protectAdmin,getUsers);
+router.put('/:id/activate',protectAdmin,activateUser);
+router.put('/:id/deactivate',protectAdmin,deactivateUser);
+router.get('/active-users',protectAdmin,getActiveUsers);
+router.get('/inactive-users',protectAdmin,getInActiveUsers);
+router.delete('/:id/delete',protectAdmin,deleteUser);
+router.put('/:id/edit-user',protectAdmin,editUser);
+router.put('/:id/add-to-drafts',protectAdmin,addToDrafts);
+router.put('/:id/remove-from-drafts',protectAdmin,removeDrafts);
+router.get('/get-drafts',protectAdmin,getDrafts);
+router.patch('/declare-result/:userId',protectAdmin,declareResult);
 
-router.put('/:id/mark-incomplete',markUserIncomplete);
-router.put('/:id/mark-complete',markUserComplete);
-router.put('/:id/mark-software-used', markSoftwareUsed);
-router.put('/:id/unmark-software-used', unmarkSoftwareUsed);
-router.put('/:id/mark-not-in-sequence', markNotInSequence);
-router.put('/:id/unmark-not-in-sequence', unmarkNotInSequence);
+router.put('/:id/mark-incomplete',protectAdmin,markUserIncomplete);
+router.put('/:id/mark-complete',protectAdmin,markUserComplete);
+router.put('/:id/mark-software-used', protectAdmin, markSoftwareUsed);
+router.put('/:id/unmark-software-used', protectAdmin, unmarkSoftwareUsed);
+router.put('/:id/mark-not-in-sequence', protectAdmin, markNotInSequence);
+router.put('/:id/unmark-not-in-sequence', protectAdmin, unmarkNotInSequence);
 
 
 
-router.put('/:id/change-password',changePassword);
-router.get('/:id/user',getUser);
-router.get('/:id/dash-stats',authMiddleware, fetchStats);
-router.get('/verify/:userId', authMiddleware, async (req, res) => {
+router.put('/:id/change-password',authMiddleware,requireSelf,changePassword);
+router.get('/:id/user',authMiddleware,requireSelf,getUser);
+router.get('/:id/dash-stats',authMiddleware,requireSelf, fetchStats);
+router.get('/verify/:userId', authMiddleware, requireSelf, async (req, res) => {
   try {
     return res.json({ valid: true });
   } catch (err) {
@@ -44,8 +46,8 @@ router.get('/verify/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-router.get('/expiring-soon',getExpiringSoonUsers);
-router.get('/targets-achieved',targetsAchieved);
+router.get('/expiring-soon',protectAdmin,getExpiringSoonUsers);
+router.get('/targets-achieved',protectAdmin,targetsAchieved);
 
 router.get('/check-auth',authMiddleware,checkActiveUser,(req,res) => {
     res.json({ active: true });

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import "../../Admin/Styles/asa.css";
-import { useNavigate, useLocation  } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from 'axios'
-import { useEffect } from "react";
+import { API_BASE } from "../../utils/api";
 
 function ChangePassComp() {
 
@@ -26,7 +26,7 @@ function ChangePassComp() {
 
     if(valid){
       try{
-        const res = await axios.put(`https://api.freelancing-project.com/api/admin/${id}/change-password`,{
+        const res = await axios.put(`${API_BASE}/admin/${id}/change-password`,{
             password, newPassword:newPass
         })
         alert(res.data.message);

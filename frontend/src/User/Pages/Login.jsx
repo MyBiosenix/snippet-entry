@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import logo2 from '../../assets/logo2.png'
+import { API_BASE } from '../../utils/api';
 
 function Login() {
   const navigate = useNavigate();
@@ -21,14 +22,14 @@ function Login() {
       if (!token || !userId) return;
 
       try {
-        const res = await axios.get(`https://api.freelancing-project.com/api/auth/verify/${userId}`, {
+        const res = await axios.get(`${API_BASE}/auth/verify/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (res.data.valid) {
           navigate('/home');
         }
-      } catch (err) {
+      } catch {
         console.log('Token invalid or expired, clearing session');
         localStorage.clear();
       }
@@ -63,7 +64,7 @@ function Login() {
 
     if (valid) {
       try {
-        const res = await axios.post('https://api.freelancing-project.com/api/auth/login', {
+        const res = await axios.post(`${API_BASE}/auth/login`, {
           email,
           password,
           forceLogin: false,
@@ -86,7 +87,7 @@ function Login() {
           );
           if (confirmForce) {
             try {
-              const res2 = await axios.post('https://api.freelancing-project.com/api/auth/login', {
+              const res2 = await axios.post(`${API_BASE}/auth/login`, {
                 email,
                 password,
                 forceLogin: true,

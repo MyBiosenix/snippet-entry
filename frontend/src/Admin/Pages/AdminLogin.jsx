@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import '../Styles/login.css'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios';
+import { API_BASE } from '../../utils/api';
 
 function AdminLogin() {
     const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ function AdminLogin() {
 
       if(valid){
         try{
-          const res = await axios.post('https://api.freelancing-project.com/api/admin/login',{
+          const res = await axios.post(`${API_BASE}/admin/login`,{
             email,password
           });
           alert('Login Succesful');

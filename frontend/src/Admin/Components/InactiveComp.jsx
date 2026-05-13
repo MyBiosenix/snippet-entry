@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { API_BASE } from "../../utils/api";
 
 function InactiveComp() {
   const [users, setUsers] = useState([]);
@@ -13,7 +14,7 @@ function InactiveComp() {
 
   const getInactiveUsers = async () => {
     try {
-      const res = await axios.get('https://api.freelancing-project.com/api/auth/inactive-users');
+      const res = await axios.get(`${API_BASE}/auth/inactive-users`);
       setUsers(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Server Error');

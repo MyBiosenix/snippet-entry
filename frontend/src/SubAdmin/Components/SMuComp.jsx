@@ -5,6 +5,8 @@ import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getPackagePageLimit } from "../../utils/packageRules";
+import { API_BASE } from "../../utils/api";
 
 function SMuComp() {
   const navigate = useNavigate();
@@ -24,7 +26,7 @@ function SMuComp() {
   const fetchUsers = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('https://api.freelancing-project.com/api/sub-admin/getusers',{
+        const res = await axios.get(`${API_BASE}/sub-admin/getusers`,{
             headers:{
                 Authorization:`Bearer ${token}`
             }
@@ -38,7 +40,7 @@ function SMuComp() {
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
+      await axios.put(`${API_BASE}/auth/${id}/activate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -47,7 +49,7 @@ function SMuComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
+      await axios.put(`${API_BASE}/auth/${id}/deactivate`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -192,9 +194,7 @@ function SMuComp() {
                       <span style={{ color: 'red', fontWeight: 'bold' }}>Inactive</span>
                     )}
                   </td>
-                  <td>{u.currentIndex}/{
-                    u.packages?.name === "Gold" ? 100 :(u.packages?.name === "VIP" || u.packages?.name === "Diamond") ? 200:"-"}
-                  </td>
+                  <td>{u.currentIndex}/{getPackagePageLimit(u.packages)}</td>
                   <td>{new Date(u.date).toLocaleDateString()}</td>
                   <td className='mybtnnns'>
                     {u.isActive ? (

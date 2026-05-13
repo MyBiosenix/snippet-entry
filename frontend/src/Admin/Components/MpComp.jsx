@@ -5,19 +5,19 @@ import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { API_BASE } from "../../utils/api";
 
 function MpComp() {
   const [packages, setPackages] = useState([]);
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const token = localStorage.getItem('token');
   const admin = JSON.parse(localStorage.getItem('admin'));
   const role = admin?.role;
 
   const fetchPackages = async () => {
     try {
-      const res = await axios.get('https://api.freelancing-project.com/api/package/all-packages');
+      const res = await axios.get(`${API_BASE}/package/all-packages`);
       console.log("API Response:", res.data);
       setPackages(res.data);
     } catch (err) {
@@ -36,7 +36,7 @@ function MpComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this Package?')) {
       try {
-        await axios.delete(`https://api.freelancing-project.com/api/package/${id}/delete-package`);
+        await axios.delete(`${API_BASE}/package/${id}/delete-package`);
         fetchPackages();
       } catch (err) {
         alert(err.response?.data?.message || 'Server error');

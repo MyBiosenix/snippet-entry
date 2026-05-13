@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "../Styles/work.css";
+import { API_BASE } from "../../utils/api";
 import axios from "../utils/axiosInstance"; // ✅ same as Dashboard
 
 function makeCaptcha(len = 5) {
@@ -89,7 +90,7 @@ function Work() {
   const fetchNextSnippet = async () => {
     try {
       const res = await fetch(
-        `https://api.freelancing-project.com/api/snippet/next/${userId}`,
+        `${API_BASE}/snippet/next/${userId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -235,7 +236,7 @@ function Work() {
     if (!confirmSubmit) return;
 
     try {
-      await fetch("https://api.freelancing-project.com/api/snippet/submit", {
+      await fetch(`${API_BASE}/snippet/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

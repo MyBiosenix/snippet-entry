@@ -1,6 +1,11 @@
 const Snippets = require('../models/Snippet');
 const User = require('../models/User');
 const { evaluateSnippet } = require('../utils/evaluator')
+const { getPackagePageLimit } = require('../utils/packageRules');
+
+function shuffleIds(ids) {
+  return [...ids].sort(() => Math.random() - 0.5);
+}
 
 const getNextSnippet = async (req, res) => {
   try {
@@ -9,35 +14,15 @@ const getNextSnippet = async (req, res) => {
     const user = await User.findById(userId).populate("packages", "name pages");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    let maxSnippets = 100;
+    const maxSnippets = getPackagePageLimit(user.packages);
+    const allSnippets = await Snippets.find().select("_id");
 
-    const packageName = user.packages?.name?.toLowerCase();
-    const pkgPages = user.packages?.pages;
-
-    if (typeof pkgPages === "number" && pkgPages > 0) {
-      maxSnippets = pkgPages;
-    } else {
-
-      if (packageName === "vip" || packageName === "diamond") {
-        maxSnippets = 200;
-      } else {
-        maxSnippets = 100; // Gold or anything else
-      }
+    if (!allSnippets.length) {
+      return res.status(404).json({ message: "No snippets found in database" });
     }
 
     if (!user.snippetOrder || user.snippetOrder.length === 0) {
-      const allSnippets = await Snippets.find().select("_id");
-
-      if (!allSnippets.length) {
-        return res.status(404).json({ message: "No snippets found in database" });
-      }
-
-      const shuffled = allSnippets
-        .map((s) => s._id)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, maxSnippets);
-
-      user.snippetOrder = shuffled;
+      user.snippetOrder = shuffleIds(allSnippets.map((s) => s._id)).slice(0, maxSnippets);
       user.currentIndex = 0;
       await user.save();
     }
@@ -51,6 +36,19 @@ const getNextSnippet = async (req, res) => {
         user.currentIndex = user.snippetOrder.length;
       }
 
+      await user.save();
+    }
+
+    if (user.snippetOrder.length < maxSnippets) {
+      const existingIds = new Set(user.snippetOrder.map((id) => String(id)));
+      const missingPool = shuffleIds(
+        allSnippets
+          .map((snippet) => snippet._id)
+          .filter((id) => !existingIds.has(String(id)))
+      );
+
+      const needed = maxSnippets - user.snippetOrder.length;
+      user.snippetOrder = [...user.snippetOrder, ...missingPool.slice(0, needed)];
       await user.save();
     }
 
@@ -83,13 +81,29 @@ const submitSnippet = async (req, res) => {
   try {
     const { userId, snippetId, userText } = req.body;
 
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!Array.isArray(user.snippetOrder) || user.currentIndex >= user.snippetOrder.length) {
+      return res.status(400).json({ message: "No active snippet available for submission" });
+    }
+
+    const expectedSnippetId = String(user.snippetOrder[user.currentIndex]);
+    if (String(snippetId) !== expectedSnippetId) {
+      return res.status(409).json({ message: "Snippet submission is out of sequence" });
+    }
+
+    const existingPage = user.myerrors.find(
+      (entry) => entry.pageNumber === user.currentIndex + 1
+    );
+    if (existingPage) {
+      return res.status(409).json({ message: "This page has already been submitted" });
+    }
+
     const snippet = await Snippets.findById(snippetId);
     if (!snippet) return res.status(404).json({ message: "Snippet not found" });
 
     const { myerrors, debugParts } = evaluateSnippet(snippet.content, userText, { debug: true });
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
 
     user.myerrors.push({
       snippetId,

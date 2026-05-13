@@ -5,6 +5,8 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getPackagePageLimit } from "../../utils/packageRules";
+import { API_BASE } from "../../utils/api";
 
 const dropItemStyle = {
   padding: "9px 16px",
@@ -66,7 +68,7 @@ function MuComp() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("https://api.freelancing-project.com/api/auth/all-users");
+      const res = await axios.get(`${API_BASE}/auth/all-users`);
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching users");
@@ -76,7 +78,7 @@ function MuComp() {
   // ── activate/deactivate ──
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
+      await axios.put(`${API_BASE}/auth/${id}/activate`);
       patchUserInState(id, { isActive: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -85,7 +87,7 @@ function MuComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
+      await axios.put(`${API_BASE}/auth/${id}/deactivate`);
       patchUserInState(id, { isActive: false });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -95,7 +97,7 @@ function MuComp() {
   // ── drafts ──
   const handleAddToDraft = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/add-to-drafts`);
+      await axios.put(`${API_BASE}/auth/${id}/add-to-drafts`);
       patchUserInState(id, { isDraft: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -104,7 +106,7 @@ function MuComp() {
 
   const handleRemoveFromDraft = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/remove-from-drafts`);
+      await axios.put(`${API_BASE}/auth/${id}/remove-from-drafts`);
       patchUserInState(id, { isDraft: false });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -116,7 +118,7 @@ function MuComp() {
     const prev = users;
     patchUserInState(id, { isComplete: false });
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-incomplete`);
+      await axios.put(`${API_BASE}/auth/${id}/mark-incomplete`);
       setOpenActionDropdown(null);
     } catch (err) {
       setUsers(prev);
@@ -128,7 +130,7 @@ function MuComp() {
     const prev = users;
     patchUserInState(id, { isComplete: true });
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-complete`);
+      await axios.put(`${API_BASE}/auth/${id}/mark-complete`);
       setOpenActionDropdown(null);
     } catch (err) {
       setUsers(prev);
@@ -140,7 +142,7 @@ function MuComp() {
     const prev = users;
     patchUserInState(id, { softwareUsed: true });
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-software-used`);
+      await axios.put(`${API_BASE}/auth/${id}/mark-software-used`);
       setOpenActionDropdown(null);
     } catch (err) {
       setUsers(prev);
@@ -152,7 +154,7 @@ function MuComp() {
     const prev = users;
     patchUserInState(id, { softwareUsed: false });
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/unmark-software-used`);
+      await axios.put(`${API_BASE}/auth/${id}/unmark-software-used`);
       setOpenActionDropdown(null);
     } catch (err) {
       setUsers(prev);
@@ -164,7 +166,7 @@ function MuComp() {
     const prev = users;
     patchUserInState(id, { notInSequence: true });
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/mark-not-in-sequence`);
+      await axios.put(`${API_BASE}/auth/${id}/mark-not-in-sequence`);
       setOpenActionDropdown(null);
     } catch (err) {
       setUsers(prev);
@@ -176,7 +178,7 @@ function MuComp() {
     const prev = users;
     patchUserInState(id, { notInSequence: false });
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/unmark-not-in-sequence`);
+      await axios.put(`${API_BASE}/auth/${id}/unmark-not-in-sequence`);
       setOpenActionDropdown(null);
     } catch (err) {
       setUsers(prev);
@@ -188,7 +190,7 @@ function MuComp() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
-      await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
+      await axios.delete(`${API_BASE}/auth/${id}/delete`);
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.message || "Server error");
@@ -418,14 +420,7 @@ function MuComp() {
                       </div>
                     </td>
 
-                    <td>
-                      {u.currentIndex}/
-                      {typeof u.packages?.pages === "number" && u.packages.pages > 0
-                        ? u.packages.pages
-                        : u.packages?.name === "VIP" || u.packages?.name === "Diamond"
-                        ? 200
-                        : 100}
-                    </td>
+                    <td>{u.currentIndex}/{getPackagePageLimit(u.packages)}</td>
 
                     <td>{u.date ? new Date(u.date).toLocaleDateString() : "-"}</td>
 

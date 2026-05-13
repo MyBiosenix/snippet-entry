@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { API_BASE } from "../../utils/api";
 
 function SAUComp() {
   const [users, setUsers] = useState([]);
@@ -14,7 +15,7 @@ function SAUComp() {
   const getActiveUsers = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('https://api.freelancing-project.com/api/sub-admin/active-users',{
+        const res = await axios.get(`${API_BASE}/sub-admin/active-users`,{
             headers:{
                 Authorization:`Bearer ${token}`
             }

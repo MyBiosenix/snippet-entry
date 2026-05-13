@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import '../../Admin/Styles/dash.css'
 import {FaUserShield, FaUsers, FaUserCheck, FaUserSlash, FaClock} from 'react-icons/fa'
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { API_BASE } from '../../utils/api';
 
 function Dashboard() {
 
@@ -15,7 +15,7 @@ function Dashboard() {
     const getStats = async() => {
         try{
             const token = localStorage.getItem('token');
-            const res = await axios.get('https://api.freelancing-project.com/api/sub-admin/stats',{
+            const res = await axios.get(`${API_BASE}/sub-admin/stats`,{
                 headers:{
                     Authorization:`Bearer ${token}`
                 }

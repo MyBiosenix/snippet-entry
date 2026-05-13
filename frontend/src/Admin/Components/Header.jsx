@@ -13,14 +13,13 @@ function Header() {
 
     useEffect(() => {
         const adminData = JSON.parse(localStorage.getItem('admin'));
-        console.log(adminData.name);
         if(adminData && adminData.name){
             setAdminName(adminData.name);
         }
         if(adminData && adminData.role){
             setAdminRole(adminData.role);
         }
-    })
+    },[])
 
     const handleLogout = async() => {
 

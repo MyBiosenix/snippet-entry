@@ -3,6 +3,7 @@ import "../Styles/asa.css";
 import { useNavigate, useLocation  } from "react-router-dom";
 import axios from 'axios'
 import { useEffect } from "react";
+import { API_BASE } from "../../utils/api";
 
 
 
@@ -55,14 +56,14 @@ function AsaComp() {
     if(valid){
       try{
         if(adminToEdit){
-          const res = await axios.put(`https://api.freelancing-project.com/api/admin/${adminToEdit._id}/edit-admin`,{
+          const res = await axios.put(`${API_BASE}/admin/${adminToEdit._id}/edit-admin`,{
             name, email, role, password
           });
           alert(res.data.message);
           navigate('/admin/manage-admin');
         }
         else{
-          const res = await axios.post('https://api.freelancing-project.com/api/admin/create-admin',{
+          const res = await axios.post(`${API_BASE}/admin/create-admin`,{
           name, email, role,password
           });
           alert(res.data.message);

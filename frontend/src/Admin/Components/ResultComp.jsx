@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import "../Styles/result.css";
+import { API_BASE } from "../../utils/api";
 
 function ResultComp() {
   const [results, setResults] = useState([]);
@@ -33,7 +34,6 @@ function ResultComp() {
 
   const token = localStorage.getItem("token");
 
-  const API_BASE = "https://api.freelancing-project.com/api";
   const SNIPPET_BASE = `${API_BASE}/snippet`;
   const AUTH_BASE = `${API_BASE}/auth`;
 

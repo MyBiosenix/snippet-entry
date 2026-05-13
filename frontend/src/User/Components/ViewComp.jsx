@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import '../Styles/reports.css';
 import { useNavigate  } from 'react-router-dom';
+import { API_BASE } from '../../utils/api';
 
 function ViewComp() {
   const [results, setResults] = useState([]);
@@ -11,7 +12,7 @@ function ViewComp() {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`https://api.freelancing-project.com/api/snippet/user/${userId}`)
+    fetch(`${API_BASE}/snippet/user/${userId}`)
       .then(res => res.json())
       .then(data => {
         console.log("Fetched snippets:", data);

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import "../Styles/asa.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { API_BASE } from "../../utils/api";
 
 function AUComp() {
   const location = useLocation();
@@ -33,7 +34,7 @@ function AUComp() {
 
   const getAdminNames = async () => {
     try {
-      const res = await axios.get("https://api.freelancing-project.com/api/admin/adminnames");
+      const res = await axios.get(`${API_BASE}/admin/adminnames`);
       setAdminList(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching admins");
@@ -44,7 +45,7 @@ function AUComp() {
     try {
       // ✅ IMPORTANT: This API must return package price too
       // Example item: { _id, name, price } (or amount/cost)
-      const res = await axios.get("https://api.freelancing-project.com/api/package/package-names");
+      const res = await axios.get(`${API_BASE}/package/package-names`);
       setPackagesList(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching packages");
@@ -195,13 +196,13 @@ function AUComp() {
 
       if (userToEdit) {
         const res = await axios.put(
-          `https://api.freelancing-project.com/api/auth/${userToEdit._id}/edit-user`,
+          `${API_BASE}/auth/${userToEdit._id}/edit-user`,
           payload
         );
         alert(res.data.message);
         navigate("/admin/manage-user");
       } else {
-        const res = await axios.post("https://api.freelancing-project.com/api/auth/create-user", payload);
+        const res = await axios.post(`${API_BASE}/auth/create-user`, payload);
         alert(res.data.message);
         navigate("/admin/manage-user");
       }

@@ -17,7 +17,7 @@ function Header() {
             setSubAdminName(subAdminData.name);
             setSubAdminRole(subAdminData.role);
         } 
-    })
+    },[])
 
     const handleLogout = async() => {
         const confirmLogout = window.confirm('Do You Really want to Logout?');
@@ -60,7 +60,7 @@ function Header() {
 
         <div className={`dropdown ${showDropdown ? 'showDropdown':''}`}>
             <p className='dop'><FaUserCircle/>Profile</p>
-            <p className='dop' onClick={()=>navigate('/admin/change-password')}><FaKey/>Change Password</p>
+            <p className='dop' onClick={()=>navigate('/sub-admin/home')}><FaKey/>Change Password</p>
         </div>
     </div>
   )

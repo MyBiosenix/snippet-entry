@@ -5,6 +5,8 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getPackagePageLimit } from "../../utils/packageRules";
+import { API_BASE } from "../../utils/api";
 
 function DraftComp() {
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ function DraftComp() {
 
   const fetchDraftUsers = async () => {
     try {
-      const res = await axios.get("https://api.freelancing-project.com/api/auth/get-drafts");
+      const res = await axios.get(`${API_BASE}/auth/get-drafts`);
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching draft users");
@@ -38,7 +40,7 @@ function DraftComp() {
 
   const handleActivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/activate`);
+      await axios.put(`${API_BASE}/auth/${id}/activate`);
       patchUserInState(id, { isActive: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -47,7 +49,7 @@ function DraftComp() {
 
   const handleDeactivate = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/deactivate`);
+      await axios.put(`${API_BASE}/auth/${id}/deactivate`);
       patchUserInState(id, { isActive: false });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -58,7 +60,7 @@ function DraftComp() {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
 
     try {
-      await axios.delete(`https://api.freelancing-project.com/api/auth/${id}/delete`);
+      await axios.delete(`${API_BASE}/auth/${id}/delete`);
       removeUserFromList(id);
     } catch (err) {
       alert(err.response?.data?.message || "Server error");
@@ -67,7 +69,7 @@ function DraftComp() {
 
   const handleRemoveFromDraft = async (id) => {
     try {
-      await axios.put(`https://api.freelancing-project.com/api/auth/${id}/remove-from-drafts`);
+      await axios.put(`${API_BASE}/auth/${id}/remove-from-drafts`);
       removeUserFromList(id);
     } catch (err) {
       alert(err.response?.data?.message || err.message);
@@ -220,15 +222,7 @@ function DraftComp() {
                         <span style={{ color: "red", fontWeight: "bold" }}>Inactive</span>
                       )}
                     </td>
-                    <td>
-                        {u.currentIndex}/{
-                            u.packages?.name === "Gold"
-                            ? 100
-                            : (u.packages?.name === "VIP" || u.packages?.name === "Diamond")
-                            ? 200
-                            : "-"
-                        }
-                    </td>
+                    <td>{u.currentIndex}/{getPackagePageLimit(u.packages)}</td>
 
                     <td>{u.date ? new Date(u.date).toLocaleDateString() : "-"}</td>
 

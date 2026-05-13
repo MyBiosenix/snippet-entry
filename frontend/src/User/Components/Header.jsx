@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { FaUser, FaTachometerAlt, FaKeyboard, FaRegQuestionCircle, FaSignOutAlt} from 'react-icons/fa'
 import { FiMenu } from 'react-icons/fi'
 import { FaUserCircle, FaKey} from 'react-icons/fa'
+import { API_BASE } from '../../utils/api'
 
 function Header() {
     const navigate = useNavigate();
@@ -13,11 +14,10 @@ function Header() {
 
     useEffect(() => {
         const userData = JSON.parse(localStorage.getItem('user'));
-        console.log(userData.name);
         if(userData && userData.name){
             setUserName(userData.name);
         }
-    })
+    },[])
 
     const handleLogout = async () => {
   const confirmLogout = window.confirm("Do you really want to Logout?");
@@ -25,7 +25,7 @@ function Header() {
 
   try {
     const token = localStorage.getItem('token');
-    await fetch("https://api.freelancing-project.com/api/auth/logout", {
+    await fetch(`${API_BASE}/auth/logout`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });

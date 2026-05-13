@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const User = require('../models/User');
+const env = require('../config/env');
 
 exports.login = async(req, res) =>{
     try{
@@ -15,7 +16,7 @@ exports.login = async(req, res) =>{
         }
         const token = jwt.sign(
             { id: admin._id, role: admin.role},
-            process.env.JWT_SECRET,
+            env.jwtSecret,
             {expiresIn: '1h'}
         );
 

@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import "../Styles/errors.css";
+import { API_BASE } from "../../utils/api";
 
 const ProtectedRoute = ({ children }) => {
   const [isAllowed, setIsAllowed] = useState(null); // null = loading
@@ -16,7 +17,7 @@ const ProtectedRoute = ({ children }) => {
       }
 
       try {
-        await axios.get("https://api.freelancing-project.com/api/auth/check-auth", {
+        await axios.get(`${API_BASE}/auth/check-auth`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsAllowed(true);

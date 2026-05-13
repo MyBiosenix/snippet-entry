@@ -3,6 +3,7 @@ import '../Styles/dash.css'
 import {FaUserShield, FaUsers, FaUserCheck, FaUserSlash, FaClock} from 'react-icons/fa'
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from "../../utils/api";
 
 function Dashboard() {
     const [admins, setAdmins] = useState(0);
@@ -16,7 +17,7 @@ function Dashboard() {
 
     const getStats = async() => {
         try{
-            const res = await axios.get('https://api.freelancing-project.com/api/admin/dash-stats');
+            const res = await axios.get(`${API_BASE}/admin/dash-stats`);
             setAdmins(res.data.totalAdmins);
             setUsers(res.data.totalUsers);
             setActiveUsers(res.data.activeUsers);
@@ -33,7 +34,7 @@ function Dashboard() {
 
     const getexpiringSoon = async() => {
         try{
-            const res = await axios.get("https://api.freelancing-project.com/api/auth/expiring-soon")
+            const res = await axios.get(`${API_BASE}/auth/expiring-soon`)
             setExpiringSoon(res.data.totalExpiringSoon);
         }
         catch(err){
@@ -44,7 +45,7 @@ function Dashboard() {
 
     const getTargetsAchieved = async() => {
         try{
-            const res = await axios.get("https://api.freelancing-project.com/api/auth/targets-achieved")
+            const res = await axios.get(`${API_BASE}/auth/targets-achieved`)
             setTargetsAchieved(res.data.count);
         }
         catch(err){

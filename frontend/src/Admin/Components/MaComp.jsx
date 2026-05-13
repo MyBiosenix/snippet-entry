@@ -5,6 +5,7 @@ import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { API_BASE } from "../../utils/api";
 
 function MaComp() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ function MaComp() {
 
   const fetchAdmins = async () => {
     try {
-      const res = await axios.get('https://api.freelancing-project.com/api/admin/all-admins');
+      const res = await axios.get(`${API_BASE}/admin/all-admins`);
       setAdmins(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Server Error');
@@ -23,7 +24,7 @@ function MaComp() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this admin?')) {
       try {
-        await axios.delete(`https://api.freelancing-project.com/api/admin/${id}/delete`);
+        await axios.delete(`${API_BASE}/admin/${id}/delete`);
         fetchAdmins();
       } catch (err) {
         alert(err.response?.data?.message || 'Server Error');
