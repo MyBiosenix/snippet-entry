@@ -32,7 +32,7 @@ router.get('/user-visible/:userId', authMiddleware, requireSelf, getVisibleUserR
 
 router.patch("/edit-text/:userId/:errorId", protectAdmin, editUserText);
 
-router.get('/user/:userId', protectAdmin, showUser);
+router.get('/user/:userId', authMiddleware, requireSelf, showUser);
 
 
 

@@ -4,7 +4,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import "../Styles/reports.css";
 import { useNavigate } from "react-router-dom";
-import { API_BASE } from "../../utils/api";
+import http from "../../utils/http";
 
 Modal.setAppElement("#root");
 
@@ -54,10 +54,6 @@ function ReportComp() {
 
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
-  const token = localStorage.getItem("token");
-
-  const AUTH_BASE = `${API_BASE}/auth`;
-  const SNIPPET_BASE = `${API_BASE}/snippet`;
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("user") || "{}");
@@ -75,10 +71,8 @@ function ReportComp() {
 
     setChecking(true);
 
-    fetch(`${AUTH_BASE}/${userId}/user`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
+    http.get(`/auth/${userId}/user`)
+      .then((res) => res.data)
       .then((data) => {
         setIsDeclared(!!(data?.isDeclared ?? data?.reportDeclared));
         setIsComplete(data?.isComplete === false ? false : true);
@@ -100,10 +94,8 @@ function ReportComp() {
   useEffect(() => {
     if (!userId || !canShowReport) return;
 
-    fetch(`${SNIPPET_BASE}/user-visible/${userId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
+    http.get(`/snippet/user-visible/${userId}`)
+      .then((res) => res.data)
       .then((data) => setResults(Array.isArray(data) ? data : []))
       .catch((err) => console.error(err));
   }, [userId, canShowReport]);

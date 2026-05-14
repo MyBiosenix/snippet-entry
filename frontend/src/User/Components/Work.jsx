@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "../Styles/work.css";
-import { API_BASE } from "../../utils/api";
 import axios from "../utils/axiosInstance"; // ✅ same as Dashboard
 
 function makeCaptcha(len = 5) {
@@ -25,7 +24,8 @@ function Work() {
   const [captchaError, setCaptchaError] = useState("");
 
   const userId = localStorage.getItem("userId");
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("userToken") || localStorage.getItem("token");
 
   // ✅ validity lock states
   const [validTill, setValidTill] = useState(null);
@@ -52,9 +52,7 @@ function Work() {
           return;
         }
 
-        const res = await axios.get(`/auth/${userId}/dash-stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(`/auth/${userId}/dash-stats`);
 
         const vt = res.data?.validTill || null;
         setValidTill(vt);
@@ -89,12 +87,8 @@ function Work() {
 
   const fetchNextSnippet = async () => {
     try {
-      const res = await fetch(
-        `${API_BASE}/snippet/next/${userId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const data = await res.json();
+      const res = await axios.get(`/snippet/next/${userId}`);
+      const data = res.data;
 
       if (data.done) {
         setIsCompleted(true);
@@ -236,14 +230,7 @@ function Work() {
     if (!confirmSubmit) return;
 
     try {
-      await fetch(`${API_BASE}/snippet/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId, snippetId: snippet._id, userText }),
-      });
+      await axios.post("/snippet/submit", { userId, snippetId: snippet._id, userText });
 
       fetchNextSnippet();
     } catch (err) {

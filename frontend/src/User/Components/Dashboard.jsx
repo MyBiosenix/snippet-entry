@@ -30,17 +30,12 @@ function Dashboard() {
     const fetchAll = async () => {
       try {
         const userId = localStorage.getItem("userId");
-        const token = localStorage.getItem("token");
         if (!userId) { setError("No user ID found"); return; }
 
         // fetch dash stats + user flags in parallel
         const [statsRes, userRes] = await Promise.all([
-          axios.get(`/auth/${userId}/dash-stats`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`/auth/${userId}/user`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }),
+          axios.get(`/auth/${userId}/dash-stats`),
+          axios.get(`/auth/${userId}/user`),
         ]);
 
         setStats(statsRes.data);

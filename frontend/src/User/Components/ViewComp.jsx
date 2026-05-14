@@ -1,24 +1,63 @@
 import React, { useEffect, useState } from 'react';
 import '../Styles/reports.css';
 import { useNavigate  } from 'react-router-dom';
+import http from '../../utils/http';
 import { API_BASE } from '../../utils/api';
 
 function ViewComp() {
   const [results, setResults] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const userId = localStorage.getItem("userId");
+  const [error, setError] = useState('');
+
+  const getStoredUserId = () => {
+    const directUserId = localStorage.getItem('userId');
+    if (directUserId) return directUserId;
+
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return user._id || user.id || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const userId = getStoredUserId();
 
   const navigate = useNavigate();
   useEffect(() => {
-    if (!userId) return;
+    const token =
+      localStorage.getItem('userToken') || localStorage.getItem('token');
 
-    fetch(`${API_BASE}/snippet/user/${userId}`)
-      .then(res => res.json())
-      .then(data => {
-        console.log("Fetched snippets:", data);
+    if (import.meta.env.DEV) {
+      console.log('API_BASE:', API_BASE);
+      console.log('Has userToken:', Boolean(localStorage.getItem('userToken')));
+      console.log('Has token:', Boolean(localStorage.getItem('token')));
+      console.log('User ID:', userId);
+    }
+
+    if (!token || !userId) {
+      setError('Please login again.');
+      setResults([]);
+      return;
+    }
+
+    const fetchUserSnippets = async () => {
+      try {
+        setError('');
+        const res = await http.get(`/snippet/user/${userId}`);
+        const data = Array.isArray(res.data) ? res.data : [];
+        if (import.meta.env.DEV) {
+          console.log('Fetched snippets count:', data.length);
+        }
         setResults(data);
-      })
-      .catch(err => console.error("Error fetching user snippets:", err));
+      } catch (err) {
+        console.error('Error fetching user snippets:', err);
+        setError(err?.response?.data?.message || 'Failed to fetch submitted pages.');
+        setResults([]);
+      }
+    };
+
+    fetchUserSnippets();
   }, [userId]);
 
   return (
@@ -26,7 +65,9 @@ function ViewComp() {
       <p className='back' onClick={()=>navigate('/home')}>Back</p>
       <h2 className="report-title">All Submitted Pages</h2>
 
-      {results.length > 0 ? (
+      {error ? <p className="no-report">{error}</p> : null}
+
+      {!error && results.length > 0 ? (
         <>
           <div className="snippet-buttons">
             {results.map((r, idx) => (
@@ -56,9 +97,9 @@ function ViewComp() {
             </div>
           </div>
         </>
-      ) : (
+      ) : !error ? (
         <p className="no-report">No Submitted Work Found.</p>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import '../Styles/login.css';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import logo2 from '../../assets/logo2.png'
-import { API_BASE } from '../../utils/api';
+import http from '../../utils/http';
 
 function Login() {
   const navigate = useNavigate();
@@ -14,17 +13,46 @@ function Login() {
   const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const storeUserSession = (payload) => {
+    const user = payload?.user || payload?.data || payload?.userData || payload;
+    const token = payload?.token;
+
+    if (token) {
+      localStorage.setItem('userToken', token);
+      localStorage.setItem('token', token);
+    }
+
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+      const storedUserId = user._id || user.id;
+      if (storedUserId) {
+        localStorage.setItem('userId', storedUserId);
+      }
+      if (typeof user.isActive !== 'undefined') {
+        localStorage.setItem('isActive', String(user.isActive));
+      }
+    }
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('userId');
+      const token =
+        localStorage.getItem('userToken') || localStorage.getItem('token');
+      const userId =
+        localStorage.getItem('userId') ||
+        (() => {
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            return user._id || user.id || '';
+          } catch {
+            return '';
+          }
+        })();
 
       if (!token || !userId) return;
 
       try {
-        const res = await axios.get(`${API_BASE}/auth/verify/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await http.get(`/auth/verify/${userId}`);
 
         if (res.data.valid) {
           navigate('/home');
@@ -64,17 +92,14 @@ function Login() {
 
     if (valid) {
       try {
-        const res = await axios.post(`${API_BASE}/auth/login`, {
+        const res = await http.post('/auth/login', {
           email,
           password,
           forceLogin: false,
         });
 
         alert('Login Successful');
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        localStorage.setItem('userId', res.data.user.id);
-        localStorage.setItem('isActive', res.data.user.isActive);
+        storeUserSession(res.data);
         navigate('/home');
       } catch (err) {
         if (
@@ -87,16 +112,13 @@ function Login() {
           );
           if (confirmForce) {
             try {
-              const res2 = await axios.post(`${API_BASE}/auth/login`, {
+              const res2 = await http.post('/auth/login', {
                 email,
                 password,
                 forceLogin: true,
               });
               alert('Logged in successfully on this device.');
-              localStorage.setItem('token', res2.data.token);
-              localStorage.setItem('user', JSON.stringify(res2.data.user));
-              localStorage.setItem('userId', res2.data.user.id);
-              localStorage.setItem('isActive', res2.data.user.isActive);
+              storeUserSession(res2.data);
               navigate('/home');
             } catch (innerErr) {
               alert(innerErr.response?.data?.message || 'Login failed');

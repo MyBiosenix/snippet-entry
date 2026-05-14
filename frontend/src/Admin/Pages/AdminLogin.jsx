@@ -38,6 +38,7 @@ function AdminLogin() {
             email,password
           });
           alert('Login Succesful');
+          localStorage.setItem('adminToken',res.data.token);
           localStorage.setItem('token',res.data.token);
           localStorage.setItem('admin', JSON.stringify(res.data.admin));
           localStorage.setItem('adminId', res.data.admin.id);

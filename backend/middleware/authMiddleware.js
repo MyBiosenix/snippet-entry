@@ -4,25 +4,29 @@ const env = require("../config/env");
 
 module.exports = async function (req, res, next) {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+
     if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+      return res.status(401).json({ message: "Not authorized" });
     }
 
     const decoded = jwt.verify(token, env.jwtSecret);
     const user = await User.findById(decoded.id);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(401).json({ message: "Not authorized" });
     }
 
     if (user.lastLoginSession !== token) {
-      return res.status(401).json({ message: "Session expired or logged in elsewhere" });
+      return res.status(401).json({ message: "Not authorized" });
     }
 
     req.user = user;
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    return res.status(401).json({ message: "Not authorized" });
   }
 };

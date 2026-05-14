@@ -1,23 +1,6 @@
-import axios from "axios";
-import { API_BASE } from "../../utils/api";
+import http from "../../utils/http";
 
-const axiosInstance = axios.create({
-  baseURL: API_BASE,
-});
-
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-
-axiosInstance.interceptors.response.use(
+http.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
@@ -28,4 +11,4 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export default axiosInstance;
+export default http;

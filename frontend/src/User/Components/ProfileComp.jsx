@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "../Styles/profile.css";
-import axios from "axios";
-import { API_BASE } from "../../utils/api";
+import http from "../../utils/http";
 
 function ProfileComp() {
   const id = localStorage.getItem("userId");
@@ -10,12 +9,12 @@ function ProfileComp() {
 
   const getUser = async () => {
     try {
-      const res = await axios.get(
-        `${API_BASE}/auth/${id}/user`,
-        token
-          ? { headers: { Authorization: `Bearer ${token}` } }
-          : undefined
-      );
+      if (!id || !token) {
+        alert("Please login again.");
+        return;
+      }
+
+      const res = await http.get(`/auth/${id}/user`);
       setUser(res.data);
     } catch (err) {
       if (err?.response?.data?.message) alert(err.response.data.message);

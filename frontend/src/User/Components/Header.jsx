@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { FaUser, FaTachometerAlt, FaKeyboard, FaRegQuestionCircle, FaSignOutAlt} from 'react-icons/fa'
 import { FiMenu } from 'react-icons/fi'
 import { FaUserCircle, FaKey} from 'react-icons/fa'
-import { API_BASE } from '../../utils/api'
+import http from '../../utils/http'
 
 function Header() {
     const navigate = useNavigate();
@@ -24,13 +24,10 @@ function Header() {
   if (!confirmLogout) return;
 
   try {
-    const token = localStorage.getItem('token');
-    await fetch(`${API_BASE}/auth/logout`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await http.post('/auth/logout');
 
     localStorage.removeItem('user');
+    localStorage.removeItem('userToken');
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('isActive');

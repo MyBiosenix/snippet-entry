@@ -309,7 +309,7 @@ const editUserText = async (req, res) => {
 
 const showUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId || req.params.id;
 
     const user = await User.findById(userId)
       .populate("myerrors.snippetId", "title content"); 
@@ -318,7 +318,7 @@ const showUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user.myerrors); 
+    return res.status(200).json(Array.isArray(user.myerrors) ? user.myerrors : []);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch user snippets" });

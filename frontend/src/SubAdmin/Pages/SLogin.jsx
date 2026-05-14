@@ -38,6 +38,7 @@ function SLogin() {
             email,password
           });
           alert('Login Succesful');
+          localStorage.setItem('subAdminToken',res.data.token);
           localStorage.setItem('token',res.data.token);
           localStorage.setItem('subadmin', JSON.stringify(res.data.subadmin));
           localStorage.setItem('adminId', res.data.subadmin.id);
