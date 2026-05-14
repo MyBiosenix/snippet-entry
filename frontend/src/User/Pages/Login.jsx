@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import logo2 from '../../assets/logo2.png'
 import http from '../../utils/http';
+import { getStoredUserId, getUserToken } from '../../utils/auth';
 
 function Login() {
   const navigate = useNavigate();
@@ -37,17 +38,8 @@ function Login() {
   useEffect(() => {
     const checkAuth = async () => {
       const token =
-        localStorage.getItem('userToken') || localStorage.getItem('token');
-      const userId =
-        localStorage.getItem('userId') ||
-        (() => {
-          try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            return user._id || user.id || '';
-          } catch {
-            return '';
-          }
-        })();
+        getUserToken();
+      const userId = getStoredUserId();
 
       if (!token || !userId) return;
 

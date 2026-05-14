@@ -24,8 +24,9 @@ function Header() {
 
         if(confirmLogout){
             localStorage.removeItem('subadmin');
+            localStorage.removeItem('subAdminToken');
             localStorage.removeItem('token');
-            localStorage.removeItem('subadminId');
+            localStorage.removeItem('adminId');
 
             navigate('/sub-admin/login');
         }

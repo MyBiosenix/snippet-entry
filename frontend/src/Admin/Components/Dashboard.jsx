@@ -4,6 +4,7 @@ import {FaUserShield, FaUsers, FaUserCheck, FaUserSlash, FaClock} from 'react-ic
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from "../../utils/api";
+import { getAdminToken } from "../../utils/auth";
 
 function Dashboard() {
     const [admins, setAdmins] = useState(0);
@@ -17,7 +18,10 @@ function Dashboard() {
 
     const getStats = async() => {
         try{
-            const res = await axios.get(`${API_BASE}/admin/dash-stats`);
+            const token = getAdminToken();
+            const res = await axios.get(`${API_BASE}/admin/dash-stats`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
             setAdmins(res.data.totalAdmins);
             setUsers(res.data.totalUsers);
             setActiveUsers(res.data.activeUsers);
@@ -34,7 +38,10 @@ function Dashboard() {
 
     const getexpiringSoon = async() => {
         try{
-            const res = await axios.get(`${API_BASE}/auth/expiring-soon`)
+            const token = getAdminToken();
+            const res = await axios.get(`${API_BASE}/auth/expiring-soon`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })
             setExpiringSoon(res.data.totalExpiringSoon);
         }
         catch(err){
@@ -45,7 +52,10 @@ function Dashboard() {
 
     const getTargetsAchieved = async() => {
         try{
-            const res = await axios.get(`${API_BASE}/auth/targets-achieved`)
+            const token = getAdminToken();
+            const res = await axios.get(`${API_BASE}/auth/targets-achieved`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })
             setTargetsAchieved(res.data.count);
         }
         catch(err){

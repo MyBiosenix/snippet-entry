@@ -3,30 +3,18 @@ import '../Styles/reports.css';
 import { useNavigate  } from 'react-router-dom';
 import http from '../../utils/http';
 import { API_BASE } from '../../utils/api';
+import { getStoredUserId, getUserToken } from '../../utils/auth';
 
 function ViewComp() {
   const [results, setResults] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState('');
 
-  const getStoredUserId = () => {
-    const directUserId = localStorage.getItem('userId');
-    if (directUserId) return directUserId;
-
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      return user._id || user.id || '';
-    } catch {
-      return '';
-    }
-  };
-
   const userId = getStoredUserId();
 
   const navigate = useNavigate();
   useEffect(() => {
-    const token =
-      localStorage.getItem('userToken') || localStorage.getItem('token');
+    const token = getUserToken();
 
     if (import.meta.env.DEV) {
       console.log('API_BASE:', API_BASE);

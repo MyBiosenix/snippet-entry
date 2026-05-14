@@ -27,6 +27,7 @@ function Header() {
 
         if(confirmLogout){
             localStorage.removeItem('admin');
+            localStorage.removeItem('adminToken');
             localStorage.removeItem('token');
             localStorage.removeItem('adminId');
 

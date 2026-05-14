@@ -3,6 +3,7 @@ import '../../Admin/Styles/dash.css'
 import {FaUserShield, FaUsers, FaUserCheck, FaUserSlash, FaClock} from 'react-icons/fa'
 import axios from 'axios';
 import { API_BASE } from '../../utils/api';
+import { getSubAdminToken } from '../../utils/auth';
 
 function Dashboard() {
 
@@ -14,7 +15,7 @@ function Dashboard() {
 
     const getStats = async() => {
         try{
-            const token = localStorage.getItem('token');
+            const token = getSubAdminToken();
             const res = await axios.get(`${API_BASE}/sub-admin/stats`,{
                 headers:{
                     Authorization:`Bearer ${token}`
