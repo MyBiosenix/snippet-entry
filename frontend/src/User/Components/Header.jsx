@@ -5,6 +5,7 @@ import { FaUser, FaTachometerAlt, FaKeyboard, FaRegQuestionCircle, FaSignOutAlt}
 import { FiMenu } from 'react-icons/fi'
 import { FaUserCircle, FaKey} from 'react-icons/fa'
 import http from '../../utils/http'
+import { clearUserSession } from '../../utils/auth'
 
 function Header() {
     const navigate = useNavigate();
@@ -25,16 +26,9 @@ function Header() {
 
   try {
     await http.post('/auth/logout');
-
-    localStorage.removeItem('user');
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('isActive');
-
+    clearUserSession();
     navigate('/');
-  } catch (err) {
-    console.error("Logout failed:", err);
+  } catch {
     alert("Error logging out. Please try again.");
   }
 };

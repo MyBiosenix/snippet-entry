@@ -3,6 +3,7 @@ import '../../Admin/Styles/login.css'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios';
 import { API_BASE } from '../../utils/api';
+import { clearSubAdminSession, storeSubAdminSession } from '../../utils/auth';
 
 function SLogin() {
     const [email, setEmail] = useState('');
@@ -38,10 +39,8 @@ function SLogin() {
             email,password
           });
           alert('Login Succesful');
-          localStorage.setItem('subAdminToken',res.data.token);
-          localStorage.setItem('token',res.data.token);
-          localStorage.setItem('subadmin', JSON.stringify(res.data.subadmin));
-          localStorage.setItem('adminId', res.data.subadmin.id);
+          clearSubAdminSession();
+          storeSubAdminSession({ token: res.data.token, subadmin: res.data.subadmin });
           navigate('/sub-admin/home')
         }
         catch(err){

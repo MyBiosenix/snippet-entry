@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { API_BASE } from "../../utils/api";
+import { getSubAdminToken } from "../../utils/auth";
 
 function SAUComp() {
   const [users, setUsers] = useState([]);
@@ -14,14 +15,13 @@ function SAUComp() {
 
   const getActiveUsers = async () => {
     try {
-        const token = localStorage.getItem('token');
+        const token = getSubAdminToken();
         const res = await axios.get(`${API_BASE}/sub-admin/active-users`,{
             headers:{
                 Authorization:`Bearer ${token}`
             }
         });
         setUsers(res.data);
-        console.log(res.data);
         } catch (err) {
         alert(err.response?.data?.message || 'Error Fetching Active Users');
         }

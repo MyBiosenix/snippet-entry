@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getPackagePageLimit } from "../../utils/packageRules";
 import { API_BASE } from "../../utils/api";
+import { getSubAdminToken } from "../../utils/auth";
 
 function SMuComp() {
   const navigate = useNavigate();
@@ -25,14 +26,13 @@ function SMuComp() {
 
   const fetchUsers = async () => {
     try {
-        const token = localStorage.getItem('token');
+        const token = getSubAdminToken();
         const res = await axios.get(`${API_BASE}/sub-admin/getusers`,{
             headers:{
                 Authorization:`Bearer ${token}`
             }
         });
         setUsers(res.data);
-        console.log(res.data);
         } catch (err) {
         alert(err.response?.data?.message || 'Error fetching users');
         }
@@ -194,7 +194,7 @@ function SMuComp() {
                       <span style={{ color: 'red', fontWeight: 'bold' }}>Inactive</span>
                     )}
                   </td>
-                  <td>{u.currentIndex}/{getPackagePageLimit(u.packages)}</td>
+                  <td>{(u.completedPages ?? u.currentIndex ?? 0)}/{getPackagePageLimit(u.packages)}</td>
                   <td>{new Date(u.date).toLocaleDateString()}</td>
                   <td className='mybtnnns'>
                     {u.isActive ? (
@@ -209,7 +209,7 @@ function SMuComp() {
                     <button
                       className='report'
                       onClick={() =>
-                        navigate('/admin/manage-user/result', { state: { user: u } })
+                        navigate('/sub-admin/manage-user/result', { state: { user: u } })
                       }
                     >
                       Report

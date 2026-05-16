@@ -175,7 +175,7 @@ function TAComp() {
                       <span style={{ color: 'red', fontWeight: 'bold' }}>Inactive</span>
                     )}
                   </td>
-                  <td>{u.currentIndex}/{getPackagePageLimit(u.packages)}</td>
+                  <td>{(u.completedPages ?? u.currentIndex ?? 0)}/{getPackagePageLimit(u.packages)}</td>
                   <td>{new Date(u.date).toLocaleDateString()}</td>
                   <td className='mybtnnns'>
                     {role === 'superadmin' && (

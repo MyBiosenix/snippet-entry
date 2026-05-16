@@ -7,6 +7,28 @@ function shuffleIds(ids) {
   return [...ids].sort(() => Math.random() - 0.5);
 }
 
+function getCompletedProgress(user) {
+  const entries = Array.isArray(user?.myerrors) ? user.myerrors : [];
+  const submittedCount = entries.length;
+  const maxPageNumber = entries.reduce((max, entry) => {
+    const pageNumber = Number(entry?.pageNumber) || 0;
+    return Math.max(max, pageNumber);
+  }, 0);
+
+  return Math.max(submittedCount, maxPageNumber);
+}
+
+async function syncUserProgress(user) {
+  const completedProgress = getCompletedProgress(user);
+
+  if (completedProgress > (Number(user.currentIndex) || 0)) {
+    user.currentIndex = completedProgress;
+    await user.save();
+  }
+
+  return completedProgress;
+}
+
 const getNextSnippet = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -52,6 +74,8 @@ const getNextSnippet = async (req, res) => {
       await user.save();
     }
 
+    await syncUserProgress(user);
+
     if (user.currentIndex >= user.snippetOrder.length) {
       return res.json({ done: true, message: "All snippets completed!" });
     }
@@ -83,6 +107,8 @@ const submitSnippet = async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    await syncUserProgress(user);
 
     if (!Array.isArray(user.snippetOrder) || user.currentIndex >= user.snippetOrder.length) {
       return res.status(400).json({ message: "No active snippet available for submission" });
@@ -149,7 +175,7 @@ const getNextSnippetIndex = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const completedCount = user.myerrors.length;
+    const completedCount = getCompletedProgress(user);
 
     res.json({ nextIndex: completedCount + 1 }); 
   } catch (err) {

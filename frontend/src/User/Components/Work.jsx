@@ -56,9 +56,8 @@ function Work() {
 
         const vt = res.data?.validTill || null;
         setValidTill(vt);
-      } catch (err) {
+      } catch {
         // Don't clear localStorage here, just mark checked
-        console.error("Error fetching validity:", err?.message || err);
       } finally {
         setExpiryChecked(true);
       }
@@ -110,7 +109,9 @@ function Work() {
       setIsCompleted(false);
       refreshCaptcha();
     } catch (err) {
-      console.error("Error fetching snippet:", err);
+      if (err?.response?.status === 401) {
+        return;
+      }
     }
   };
 
@@ -234,7 +235,7 @@ function Work() {
 
       fetchNextSnippet();
     } catch (err) {
-      console.error("Error submitting:", err);
+      alert(err?.response?.data?.message || "Failed to submit work.");
     }
   };
 

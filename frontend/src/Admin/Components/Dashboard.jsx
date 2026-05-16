@@ -44,8 +44,7 @@ function Dashboard() {
             })
             setExpiringSoon(res.data.totalExpiringSoon);
         }
-        catch(err){
-            console.error(err);
+        catch{
             setExpiringSoon(0);
         }
     }
@@ -58,8 +57,7 @@ function Dashboard() {
             })
             setTargetsAchieved(res.data.count);
         }
-        catch(err){
-            console.error(err);
+        catch{
             setTargetsAchieved(0);
         }
     }

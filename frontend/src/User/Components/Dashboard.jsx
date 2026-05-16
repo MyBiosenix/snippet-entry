@@ -44,7 +44,6 @@ function Dashboard() {
         setIsComplete(userRes.data?.isComplete === false ? false : true);
         setIsDeclared(!!(userRes.data?.isDeclared ?? userRes.data?.reportDeclared));
       } catch (err) {
-        console.error(err);
         setError("Error fetching dashboard stats: " + err.message);
       }
     };

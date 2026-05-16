@@ -17,12 +17,13 @@ exports.login = async(req, res) =>{
         const token = jwt.sign(
             { id: admin._id, role: admin.role},
             env.jwtSecret,
-            {expiresIn: '1h'}
+            {expiresIn: env.adminJwtExpiresIn}
         );
 
         res.status(200).json({
             message: 'Login Succesful',
             token,
+            expiresIn: env.adminJwtExpiresIn,
             admin:{
                 id: admin._id,
                 name: admin.name,

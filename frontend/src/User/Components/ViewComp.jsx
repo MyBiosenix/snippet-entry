@@ -16,13 +16,6 @@ function ViewComp() {
   useEffect(() => {
     const token = getUserToken();
 
-    if (import.meta.env.DEV) {
-      console.log('API_BASE:', API_BASE);
-      console.log('Has userToken:', Boolean(localStorage.getItem('userToken')));
-      console.log('Has token:', Boolean(localStorage.getItem('token')));
-      console.log('User ID:', userId);
-    }
-
     if (!token || !userId) {
       setError('Please login again.');
       setResults([]);
@@ -34,12 +27,8 @@ function ViewComp() {
         setError('');
         const res = await http.get(`/snippet/user/${userId}`);
         const data = Array.isArray(res.data) ? res.data : [];
-        if (import.meta.env.DEV) {
-          console.log('Fetched snippets count:', data.length);
-        }
         setResults(data);
       } catch (err) {
-        console.error('Error fetching user snippets:', err);
         setError(err?.response?.data?.message || 'Failed to fetch submitted pages.');
         setResults([]);
       }

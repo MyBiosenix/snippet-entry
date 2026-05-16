@@ -1,16 +1,26 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "../Styles/result.css";
 import { API_BASE } from "../../utils/api";
+import { getStaffToken } from "../../utils/auth";
 
 function ResultComp() {
+  const location = useLocation();
+  const routedUser = location.state?.user || null;
+
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
-
+  const [userDetails, setUserDetails] = useState(routedUser);
+  const [pageError, setPageError] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [visibleTotal, setVisibleTotal] = useState(0);
   const [sortOrder, setSortOrder] = useState("default");
-
+  const [editUserTextMode, setEditUserTextMode] = useState(false);
+  const [userTextDraft, setUserTextDraft] = useState("");
+  const [savingUserText, setSavingUserText] = useState(false);
+  const [isDeclared, setIsDeclared] = useState(false);
+  const [declaredAt, setDeclaredAt] = useState(null);
+  const [declaring, setDeclaring] = useState(false);
   const [editValues, setEditValues] = useState({
     capitalSmall: 0,
     punctuation: 0,
@@ -19,83 +29,93 @@ function ResultComp() {
     totalErrorPercentage: 0,
   });
 
-  const [editUserTextMode, setEditUserTextMode] = useState(false);
-  const [userTextDraft, setUserTextDraft] = useState("");
-  const [savingUserText, setSavingUserText] = useState(false);
+  const token = getStaffToken(window.location.pathname);
+  const userId =
+    routedUser?._id || sessionStorage.getItem("adminResultUserId") || "";
+  const snippetBase = `${API_BASE}/snippet`;
+  const authBase = `${API_BASE}/auth`;
 
-  // ✅ Declare Result States
-  const [isDeclared, setIsDeclared] = useState(false);
-  const [declaredAt, setDeclaredAt] = useState(null);
-  const [declaring, setDeclaring] = useState(false);
-
-  const location = useLocation();
-  const user = location.state?.user;
-  const userId = user?._id || localStorage.getItem("userId");
-
-  const token = localStorage.getItem("token");
-
-  const SNIPPET_BASE = `${API_BASE}/snippet`;
-  const AUTH_BASE = `${API_BASE}/auth`;
-
-  // ✅ helper: mark invalid only in sidebar
-  const isInvalidPage = (r) => Number(r?.totalErrorPercentage || 0) > 100;
-
-  // ✅ Fetch declared status
   useEffect(() => {
-    if (!userId) return;
+    if (routedUser?._id) {
+      sessionStorage.setItem("adminResultUserId", routedUser._id);
+      setUserDetails(routedUser);
+      setIsDeclared(Boolean(routedUser.isDeclared));
+      setDeclaredAt(routedUser.declaredAt || null);
+    }
+  }, [routedUser]);
 
-    fetch(`${AUTH_BASE}/${userId}/user`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setIsDeclared(!!data?.isDeclared);
-        setDeclaredAt(data?.declaredAt || null);
-      })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-
-  // ✅ Fetch results
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !token) {
+      setPageError("User details not found. Please open the report again from Manage Users.");
+      return;
+    }
 
-    fetch(`${SNIPPET_BASE}/results/${userId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchUserDetails = async () => {
+      try {
+        const res = await fetch(`${authBase}/admin/${userId}/user`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to fetch user details");
+        }
+
+        setUserDetails(data);
+        setIsDeclared(Boolean(data.isDeclared));
+        setDeclaredAt(data.declaredAt || null);
+        setPageError("");
+      } catch (err) {
+        setPageError(err.message || "Failed to load user details.");
+      }
+    };
+
+    fetchUserDetails();
+  }, [authBase, token, userId]);
+
+  useEffect(() => {
+    if (!userId || !token) return;
+
+    const fetchResults = async () => {
+      try {
+        const res = await fetch(`${snippetBase}/results/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to load user results");
+        }
+
         const cleaned = (Array.isArray(data) ? data : []).map((r, index) => {
-          let content = r.snippetId?.content || "";
-          let userText = r.userText || "";
-
-          content = content
+          const content = (r.snippetId?.content || "")
             .replace(/\n{2,}/g, "\n\n")
             .replace(/([^\n])\n([^\n])/g, "$1 $2");
-
-          userText = userText.replace(/\n+/g, "\n");
 
           return {
             ...r,
             pageNumber: index + 1,
             snippetId: { ...r.snippetId, content },
-            userText,
+            userText: (r.userText || "").replace(/\n+/g, "\n"),
           };
         });
 
         setResults(cleaned);
+        setPageError("");
 
-        // if selected exists, refresh it from cleaned list
         if (selected?._id) {
-          const fresh = cleaned.find((x) => x._id === selected._id);
+          const fresh = cleaned.find((item) => item._id === selected._id);
           if (fresh) setSelected(fresh);
         }
-      })
-      .catch((err) => console.error(err));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+      } catch (err) {
+        setResults([]);
+        setPageError(err.message || "Failed to load user results.");
+      }
+    };
 
-  // ---------- Visible total ----------
+    fetchResults();
+  }, [snippetBase, token, userId, selected?._id]);
+
   useEffect(() => {
     const total = results
       .filter((r) => r.visibleToUser)
@@ -103,7 +123,6 @@ function ResultComp() {
     setVisibleTotal(total);
   }, [results]);
 
-  // ---------- Sort ----------
   const sortedResults = useMemo(() => {
     if (sortOrder === "default") return results;
 
@@ -114,65 +133,70 @@ function ResultComp() {
     });
   }, [results, sortOrder]);
 
-  // ---------- Toggle visibility ----------
+  const isInvalidPage = (r) => Number(r?.totalErrorPercentage || 0) > 100;
+
   const handleToggleVisibility = async (errorId) => {
     try {
-      const res = await fetch(`${SNIPPET_BASE}/toggle/${userId}/${errorId}`, {
+      const res = await fetch(`${snippetBase}/toggle/${userId}/${errorId}`, {
         method: "PATCH",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
 
-      if (res.ok) {
-        setResults((prev) =>
-          prev.map((r) =>
-            r._id === errorId ? { ...r, visibleToUser: data.visibleToUser } : r
-          )
-        );
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to toggle visibility");
+      }
 
-        if (selected?._id === errorId) {
-          setSelected((prev) => ({ ...prev, visibleToUser: data.visibleToUser }));
-        }
-      } else {
-        alert(data.message || "Failed to toggle visibility");
+      setResults((prev) =>
+        prev.map((r) =>
+          r._id === errorId ? { ...r, visibleToUser: data.visibleToUser } : r
+        )
+      );
+
+      if (selected?._id === errorId) {
+        setSelected((prev) => ({ ...prev, visibleToUser: data.visibleToUser }));
       }
     } catch (err) {
-      console.error(err);
+      alert(err.message || "Failed to toggle visibility");
     }
   };
 
-  // ---------- ✅ Declare Result ----------
   const handleDeclareResult = async () => {
     if (!userId) return;
 
     try {
       setDeclaring(true);
 
-      const res = await fetch(`${AUTH_BASE}/declare-result/${userId}`, {
+      const res = await fetch(`${authBase}/declare-result/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ declared: true }),
       });
 
       const data = await res.json();
-      if (!res.ok) return alert(data.message || "Failed to declare result");
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to declare result");
+      }
 
-      setIsDeclared(!!data.isDeclared);
+      setIsDeclared(Boolean(data.isDeclared));
       setDeclaredAt(data.declaredAt || null);
+      setUserDetails((prev) =>
+        prev
+          ? { ...prev, isDeclared: Boolean(data.isDeclared), declaredAt: data.declaredAt || null }
+          : prev
+      );
 
-      alert("✅ Result declared to user");
+      alert("Result declared to user");
     } catch (err) {
-      console.error(err);
-      alert("Failed to declare result");
+      alert(err.message || "Failed to declare result");
     } finally {
       setDeclaring(false);
     }
   };
 
-  // ---------- Select snippet ----------
   const handleSnippetClick = (r) => {
     if (selected?._id === r._id) {
       setSelected(null);
@@ -186,12 +210,10 @@ function ResultComp() {
     setEditUserTextMode(false);
   };
 
-  // ---------- Edit counts ----------
   const handleEditClick = (r) => {
     setSelected(r);
     setEditMode(true);
     setEditUserTextMode(false);
-
     setEditValues({
       capitalSmall: Number(r.capitalSmall || 0),
       punctuation: Number(r.punctuation || 0),
@@ -201,14 +223,11 @@ function ResultComp() {
     });
   };
 
-  const calculateTotal = (vals) => {
-    return (
-      Number(vals.capitalSmall || 0) * 0.9 +
-      Number(vals.punctuation || 0) * 0.7 +
-      Number(vals.missingExtraWord || 0) +
-      Number(vals.spelling || 0)
-    );
-  };
+  const calculateTotal = (vals) =>
+    Number(vals.capitalSmall || 0) * 0.9 +
+    Number(vals.punctuation || 0) * 0.7 +
+    Number(vals.missingExtraWord || 0) +
+    Number(vals.spelling || 0);
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
@@ -229,17 +248,19 @@ function ResultComp() {
     if (!selected) return;
 
     try {
-      const res = await fetch(`${SNIPPET_BASE}/update/${userId}/${selected._id}`, {
+      const res = await fetch(`${snippetBase}/update/${userId}/${selected._id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(editValues),
       });
 
       const data = await res.json();
-      if (!res.ok) return alert(data.message || "Failed");
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to save edits");
+      }
 
       setResults((prev) =>
         prev.map((r) => (r._id === selected._id ? { ...r, ...data.updated } : r))
@@ -254,11 +275,10 @@ function ResultComp() {
 
       setEditMode(false);
     } catch (err) {
-      console.error(err);
+      alert(err.message || "Failed to save edits");
     }
   };
 
-  // ---------- ✅ Edit User Text ----------
   const startEditUserText = () => {
     if (!selected) return;
     setUserTextDraft(selected.userText || "");
@@ -281,17 +301,19 @@ function ResultComp() {
     try {
       setSavingUserText(true);
 
-      const res = await fetch(`${SNIPPET_BASE}/edit-text/${userId}/${selected._id}`, {
+      const res = await fetch(`${snippetBase}/edit-text/${userId}/${selected._id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ userText: userTextDraft }),
       });
 
       const data = await res.json();
-      if (!res.ok) return alert(data.message || "Failed");
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update user text");
+      }
 
       setResults((prev) =>
         prev.map((r) => (r._id === selected._id ? { ...r, ...data.updated } : r))
@@ -305,14 +327,12 @@ function ResultComp() {
 
       setEditUserTextMode(false);
     } catch (err) {
-      console.error(err);
-      alert("Failed to update user text");
+      alert(err.message || "Failed to update user text");
     } finally {
       setSavingUserText(false);
     }
   };
 
-  // ---------- Highlighter ----------
   function highlightErrors(original = "", userText = "") {
     const normalize = (s = "") =>
       s
@@ -329,149 +349,140 @@ function ResultComp() {
     userText = normalize(userText);
 
     const strip = (s) => s.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
-
     const oWords = original.split(/\s+/);
     const uWords = userText.split(/\s+/);
-
     const oNorm = oWords.map(strip);
     const uNorm = uWords.map(strip);
-
     const m = oNorm.length;
     const n = uNorm.length;
-
     const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
+
+    for (let i = 1; i <= m; i += 1) {
+      for (let j = 1; j <= n; j += 1) {
         if (oNorm[i - 1] === uNorm[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
         else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
       }
     }
 
-    let i = m,
-      j = n;
+    let i = m;
+    let j = n;
     const align = [];
 
     while (i > 0 && j > 0) {
       if (oNorm[i - 1] === uNorm[j - 1]) {
         align.unshift({ ow: oWords[i - 1], uw: uWords[j - 1] });
-        i--;
-        j--;
+        i -= 1;
+        j -= 1;
       } else if (dp[i - 1][j] >= dp[i][j - 1]) {
         align.unshift({ ow: oWords[i - 1], uw: null });
-        i--;
+        i -= 1;
       } else {
         align.unshift({ ow: null, uw: uWords[j - 1] });
-        j--;
+        j -= 1;
       }
     }
 
-    while (i > 0) align.unshift({ ow: oWords[i - 1], uw: null }), i--;
-    while (j > 0) align.unshift({ ow: null, uw: uWords[j - 1] }), j--;
+    while (i > 0) {
+      align.unshift({ ow: oWords[i - 1], uw: null });
+      i -= 1;
+    }
+    while (j > 0) {
+      align.unshift({ ow: null, uw: uWords[j - 1] });
+      j -= 1;
+    }
 
     const stripPunct = (s = "") =>
       typeof s === "string" ? s.replace(/[^\p{L}\p{N}]/gu, "") : "";
-
     const getPunct = (s = "") =>
       typeof s === "string" ? s.replace(/[\p{L}\p{N}]/gu, "") : "";
 
-    const result = [];
-
-    for (let k = 0; k < align.length; k++) {
-      const { ow, uw } = align[k];
-
+    return align.map(({ ow, uw }, index) => {
       if (ow && !uw) {
-        result.push(
-          <span key={k} className="error-red" data-tip="Missing word">
+        return (
+          <span key={index} className="error-red" data-tip="Missing word">
             ({ow}){" "}
           </span>
         );
-        continue;
       }
 
       if (!ow && uw) {
-        result.push(
-          <span key={k} className="error-red" data-tip="Extra word">
+        return (
+          <span key={index} className="error-red" data-tip="Extra word">
             {uw}{" "}
           </span>
         );
-        continue;
       }
 
       const baseOraw = stripPunct(ow);
       const baseUraw = stripPunct(uw);
-
       const baseOlower = baseOraw.toLowerCase();
       const baseUlower = baseUraw.toLowerCase();
 
       if (baseOlower === baseUlower && baseOraw !== baseUraw) {
-        result.push(
-          <span key={k} className="error-red" data-tip="Capital/Small mistake">
+        return (
+          <span key={index} className="error-red" data-tip="Capital/Small mistake">
             {uw}{" "}
           </span>
         );
-        continue;
       }
 
       if (baseOlower !== baseUlower) {
-        result.push(
-          <span key={k} className="error-red" data-tip="Spelling mistake">
+        return (
+          <span key={index} className="error-red" data-tip="Spelling mistake">
             {uw}{" "}
           </span>
         );
-        continue;
       }
 
-      const pO = getPunct(ow);
-      const pU = getPunct(uw);
-
-      if (pO !== pU) {
-        result.push(
-          <span key={k} className="error-blue" data-tip="Punctuation differs">
+      if (getPunct(ow) !== getPunct(uw)) {
+        return (
+          <span key={index} className="error-blue" data-tip="Punctuation differs">
             {uw}{" "}
           </span>
         );
-        continue;
       }
 
-      result.push(<span key={k}>{uw} </span>);
-    }
-
-    return result;
+      return <span key={index}>{uw} </span>;
+    });
   }
 
   return (
     <div className="result-page">
       <div className="user-info">
         <p>
-          <b>Name:</b> {user?.name}
+          <b>Name:</b> {userDetails?.name || "-"}
         </p>
         <p>
-          <b>Email:</b> {user?.email}
+          <b>Email:</b> {userDetails?.email || "-"}
         </p>
         <p>
-          <b>Package:</b> {user?.packages?.name}
+          <b>Package:</b> {userDetails?.packages?.name || "-"}
         </p>
         <p>
-          <b>Mobile:</b> {user?.mobile}
+          <b>Mobile:</b> {userDetails?.mobile || "-"}
         </p>
-
-        {/* ✅ Declare status */}
         <p style={{ marginTop: 10 }}>
           <b>Result Status:</b>{" "}
           {isDeclared ? (
-            <span style={{ color: "green" }}>Declared ✅</span>
+            <span style={{ color: "green" }}>Declared</span>
           ) : (
-            <span style={{ color: "red" }}>Not Declared ❌</span>
+            <span style={{ color: "red" }}>Not Declared</span>
           )}
         </p>
-        {isDeclared && declaredAt && (
+        {isDeclared && declaredAt ? (
           <p style={{ fontSize: 13, opacity: 0.8 }}>
             <b>Declared At:</b> {new Date(declaredAt).toLocaleString("en-IN")}
           </p>
-        )}
+        ) : null}
       </div>
 
       <h2 className="page-title">Data Conversion Results</h2>
+
+      {pageError ? (
+        <p className="placeholder" style={{ margin: "16px" }}>
+          {pageError}
+        </p>
+      ) : null}
 
       <div className="result-layout">
         <div className="result-sidebar">
@@ -491,8 +502,8 @@ function ResultComp() {
             }}
           >
             <option value="default">Default Page Order</option>
-            <option value="desc">Highest → Lowest Error</option>
-            <option value="asc">Lowest → Highest Error</option>
+            <option value="desc">Highest to Lowest Error</option>
+            <option value="asc">Lowest to Highest Error</option>
           </select>
 
           <div className="sidebar-scroll">
@@ -508,7 +519,7 @@ function ResultComp() {
                     }`}
                     onClick={() => handleSnippetClick(r)}
                   >
-                    Page {r.pageNumber} –{" "}
+                    Page {r.pageNumber} -{" "}
                     {invalid ? (
                       <>
                         <span className="invalid-badge">INVALID</span>
@@ -526,11 +537,11 @@ function ResultComp() {
                       className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
                       onClick={() => handleToggleVisibility(r._id)}
                     >
-                      {r.visibleToUser ? "Visible ✅" : "Hidden ❌"}
+                      {r.visibleToUser ? "Visible" : "Hidden"}
                     </button>
 
                     <button className="edit-btn" onClick={() => handleEditClick(r)}>
-                      Edit ✏️
+                      Edit
                     </button>
                   </div>
                 </div>
@@ -538,7 +549,6 @@ function ResultComp() {
             })}
           </div>
 
-          {/* ✅ Common Declare Result Button */}
           <button
             onClick={handleDeclareResult}
             disabled={declaring || isDeclared}
@@ -556,7 +566,7 @@ function ResultComp() {
             }}
           >
             {isDeclared
-              ? "Result Already Declared ✅"
+              ? "Result Already Declared"
               : declaring
               ? "Declaring..."
               : "Declare Result"}
@@ -566,8 +576,7 @@ function ResultComp() {
         <div className="result-details">
           {selected ? (
             <>
-              {/* ✅ Edit numeric errors */}
-              {editMode && (
+              {editMode ? (
                 <>
                   <h3 className="edit-title">Edit Errors for this Snippet</h3>
                   <div className="edit-form">
@@ -621,15 +630,12 @@ function ResultComp() {
                     </p>
 
                     <div className="edit-actions">
-                      <button onClick={handleSaveEdits}>💾 Save</button>
-                      <button onClick={handleCancelEdit}>❌ Cancel</button>
+                      <button onClick={handleSaveEdits}>Save</button>
+                      <button onClick={handleCancelEdit}>Cancel</button>
                     </div>
                   </div>
                 </>
-              )}
-
-              {/* ✅ Normal view */}
-              {!editMode && (
+              ) : (
                 <>
                   <div className="text-comparison">
                     <div className="text-box original-box">
@@ -650,7 +656,7 @@ function ResultComp() {
                       >
                         User Text
                         <button className="edit-btn" onClick={startEditUserText}>
-                          Edit User Text ✏️
+                          Edit User Text
                         </button>
                       </h4>
 
@@ -671,14 +677,14 @@ function ResultComp() {
 
                             <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                               <button onClick={saveUserText} disabled={savingUserText}>
-                                {savingUserText ? "Saving..." : "Save ✅"}
+                                {savingUserText ? "Saving..." : "Save"}
                               </button>
 
                               <button
                                 onClick={cancelEditUserText}
                                 disabled={savingUserText}
                               >
-                                Cancel ❌
+                                Cancel
                               </button>
                             </div>
                           </div>
@@ -700,22 +706,18 @@ function ResultComp() {
                       <span className="color-box color-red"></span>
                       Capital/Small: {selected.capitalSmall}
                     </li>
-
                     <li>
                       <span className="color-box color-blue"></span>
                       Punctuation: {selected.punctuation}
                     </li>
-
                     <li>
                       <span className="color-box color-red"></span>
                       Missing/Extra Word: {selected.missingExtraWord}
                     </li>
-
                     <li>
                       <span className="color-box color-red"></span>
                       Spelling: {selected.spelling}
                     </li>
-
                     <li style={{ marginTop: "10px" }}>
                       <b>Total % Error:</b>{" "}
                       {Number(selected.totalErrorPercentage || 0).toFixed(2)}%

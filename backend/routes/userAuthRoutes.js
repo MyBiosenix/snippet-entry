@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts,declareResult,markUserComplete,markUserIncomplete,markSoftwareUsed,
+const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,getUserForAdmin,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts,declareResult,markUserComplete,markUserIncomplete,markSoftwareUsed,
   unmarkSoftwareUsed,
   markNotInSequence,
   unmarkNotInSequence,} = require('../controllers/userAuthController');
@@ -25,6 +25,7 @@ router.put('/:id/add-to-drafts',protectAdmin,addToDrafts);
 router.put('/:id/remove-from-drafts',protectAdmin,removeDrafts);
 router.get('/get-drafts',protectAdmin,getDrafts);
 router.patch('/declare-result/:userId',protectAdmin,declareResult);
+router.get('/admin/:userId/user', protectAdmin, getUserForAdmin);
 
 router.put('/:id/mark-incomplete',protectAdmin,markUserIncomplete);
 router.put('/:id/mark-complete',protectAdmin,markUserComplete);

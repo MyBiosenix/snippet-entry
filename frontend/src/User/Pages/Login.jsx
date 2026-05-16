@@ -4,7 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import logo2 from '../../assets/logo2.png'
 import http from '../../utils/http';
-import { getStoredUserId, getUserToken } from '../../utils/auth';
+import {
+  clearUserSession,
+  getStoredUserId,
+  getUserToken,
+  isTokenExpired,
+  storeUserSession,
+} from '../../utils/auth';
 
 function Login() {
   const navigate = useNavigate();
@@ -14,34 +20,17 @@ function Login() {
   const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const storeUserSession = (payload) => {
-    const user = payload?.user || payload?.data || payload?.userData || payload;
-    const token = payload?.token;
-
-    if (token) {
-      localStorage.setItem('userToken', token);
-      localStorage.setItem('token', token);
-    }
-
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-      const storedUserId = user._id || user.id;
-      if (storedUserId) {
-        localStorage.setItem('userId', storedUserId);
-      }
-      if (typeof user.isActive !== 'undefined') {
-        localStorage.setItem('isActive', String(user.isActive));
-      }
-    }
-  };
-
   useEffect(() => {
     const checkAuth = async () => {
-      const token =
-        getUserToken();
+      const token = getUserToken();
       const userId = getStoredUserId();
 
       if (!token || !userId) return;
+
+      if (isTokenExpired(token)) {
+        clearUserSession();
+        return;
+      }
 
       try {
         const res = await http.get(`/auth/verify/${userId}`);
@@ -50,8 +39,7 @@ function Login() {
           navigate('/home');
         }
       } catch {
-        console.log('Token invalid or expired, clearing session');
-        localStorage.clear();
+        clearUserSession();
       }
     };
 
@@ -91,7 +79,8 @@ function Login() {
         });
 
         alert('Login Successful');
-        storeUserSession(res.data);
+        clearUserSession();
+        storeUserSession({ token: res.data.token, user: res.data.user });
         navigate('/home');
       } catch (err) {
         if (
@@ -110,7 +99,8 @@ function Login() {
                 forceLogin: true,
               });
               alert('Logged in successfully on this device.');
-              storeUserSession(res2.data);
+              clearUserSession();
+              storeUserSession({ token: res2.data.token, user: res2.data.user });
               navigate('/home');
             } catch (innerErr) {
               alert(innerErr.response?.data?.message || 'Login failed');

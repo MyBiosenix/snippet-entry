@@ -34,6 +34,8 @@ import SAU from "../../SubAdmin/Pages/SAU";
 import SIAU from "../../SubAdmin/Pages/SIAU";
 
 import ProtectedRoute from "../../User/utils/ProtectedRoute";
+import AdminProtectedRoute from "../../Admin/utils/AdminProtectedRoute";
+import SubAdminProtectedRoute from "../../SubAdmin/utils/SubAdminProtectedRoute";
 
 function AppRoutes() {
   return (
@@ -54,29 +56,177 @@ function AppRoutes() {
       <Route path="/report" element={<Report />} />
       <Route path="/view" element={<View />} />
 
-      <Route path="/admin/home" element={<AdminHome />} />
       <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin/change-password" element={<ChangePassword />} />
-      <Route path="/admin/manage-admin" element={<MA />} />
-      <Route path="/admin/manage-admin/add-admin" element={<ASA />} />
-      <Route path="/admin/manage-user" element={<MU />} />
-      <Route path="/admin/manage-user/add-user" element={<AU />} />
-      <Route path="/admin/manage-user/result" element={<Result />} />
-      <Route path="/admin/expiring-users" element={<EU />} />
-      <Route path="/admin/targets-achieved" element={<TA />} />
-      <Route path="/admin/manage-package" element={<MP />} />
-      <Route path="/admin/manage-package/add-package" element={<AP />} />
-      <Route path="/admin/user-queries" element={<UQ />} />
-      <Route path="/admin/active-users" element={<Active />} />
-      <Route path="/admin/inactive-users" element={<Inactive />} />
-      <Route path="/admin/drafts" element={<Drafts />} />
+      <Route
+        path="/admin/home"
+        element={
+          <AdminProtectedRoute>
+            <AdminHome />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/change-password"
+        element={
+          <AdminProtectedRoute>
+            <ChangePassword />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-admin"
+        element={
+          <AdminProtectedRoute>
+            <MA />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-admin/add-admin"
+        element={
+          <AdminProtectedRoute>
+            <ASA />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-user"
+        element={
+          <AdminProtectedRoute>
+            <MU />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-user/add-user"
+        element={
+          <AdminProtectedRoute>
+            <AU />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-user/result"
+        element={
+          <AdminProtectedRoute>
+            <Result />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/expiring-users"
+        element={
+          <AdminProtectedRoute>
+            <EU />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/targets-achieved"
+        element={
+          <AdminProtectedRoute>
+            <TA />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-package"
+        element={
+          <AdminProtectedRoute>
+            <MP />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-package/add-package"
+        element={
+          <AdminProtectedRoute>
+            <AP />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/user-queries"
+        element={
+          <AdminProtectedRoute>
+            <UQ />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/active-users"
+        element={
+          <AdminProtectedRoute>
+            <Active />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/inactive-users"
+        element={
+          <AdminProtectedRoute>
+            <Inactive />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/drafts"
+        element={
+          <AdminProtectedRoute>
+            <Drafts />
+          </AdminProtectedRoute>
+        }
+      />
 
       <Route path="/sub-admin/login" element={<SLogin />} />
-      <Route path="/sub-admin/home" element={<SHome />} />
-      <Route path="/sub-admin/manage-user" element={<SMU />} />
-      <Route path="/sub-admin/manage-packages" element={<SMP />} />
-      <Route path="/sub-admin/active-users" element={<SAU />} />
-      <Route path="/sub-admin/inactive-users" element={<SIAU />} />
+      <Route
+        path="/sub-admin/home"
+        element={
+          <SubAdminProtectedRoute>
+            <SHome />
+          </SubAdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/sub-admin/manage-user"
+        element={
+          <SubAdminProtectedRoute>
+            <SMU />
+          </SubAdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/sub-admin/manage-user/result"
+        element={
+          <SubAdminProtectedRoute>
+            <Result />
+          </SubAdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/sub-admin/manage-packages"
+        element={
+          <SubAdminProtectedRoute>
+            <SMP />
+          </SubAdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/sub-admin/active-users"
+        element={
+          <SubAdminProtectedRoute>
+            <SAU />
+          </SubAdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/sub-admin/inactive-users"
+        element={
+          <SubAdminProtectedRoute>
+            <SIAU />
+          </SubAdminProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

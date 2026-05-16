@@ -222,7 +222,7 @@ function DraftComp() {
                         <span style={{ color: "red", fontWeight: "bold" }}>Inactive</span>
                       )}
                     </td>
-                    <td>{u.currentIndex}/{getPackagePageLimit(u.packages)}</td>
+                    <td>{(u.completedPages ?? u.currentIndex ?? 0)}/{getPackagePageLimit(u.packages)}</td>
 
                     <td>{u.date ? new Date(u.date).toLocaleDateString() : "-"}</td>
 

@@ -6,6 +6,19 @@ const mongoose = require('mongoose');
 const { getPackagePageLimit, hasTargetAchieved } = require('../utils/packageRules');
 const env = require('../config/env');
 
+function getCompletedPages(user) {
+  return Array.isArray(user?.myerrors) ? user.myerrors.length : 0;
+}
+
+function withCompletedPages(user) {
+  if (!user) return user;
+
+  return {
+    ...user,
+    completedPages: getCompletedPages(user),
+  };
+}
+
 exports.login = async (req, res) => {
   try {
     const { email, password, forceLogin } = req.body;
@@ -26,7 +39,11 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ id: myuser._id }, env.jwtSecret, { expiresIn: '30d' });
+    const token = jwt.sign(
+      { id: myuser._id },
+      env.jwtSecret,
+      { expiresIn: env.userJwtExpiresIn }
+    );
 
     myuser.lastLoginSession = token;
     await myuser.save();
@@ -34,6 +51,7 @@ exports.login = async (req, res) => {
     res.status(200).json({
       message: 'Login Successful',
       token,
+      expiresIn: env.userJwtExpiresIn,
       user: { id: myuser._id, name: myuser.name, email: myuser.email, mobile: myuser.mobile,package: myuser.packages?.name, isActive: myuser.isActive }
     });
 
@@ -131,13 +149,13 @@ exports.getUsers = async (req, res) => {
   try {
     const allUsers = await User.find()
       .select(
-        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence"
+        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence myerrors"
       )
       .populate("admin", "name")
       .populate("packages", "name pages")
       .lean();
 
-    res.status(200).json(allUsers);
+    res.status(200).json(allUsers.map(withCompletedPages));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -178,8 +196,8 @@ exports.deactivateUser = async(req,res) => {
 
 exports.getActiveUsers = async(req,res) => {
     try{
-        const activeusers = await User.find({isActive:true})
-        res.status(200).json(activeusers);
+        const activeusers = await User.find({isActive:true}).lean();
+        res.status(200).json(activeusers.map(withCompletedPages));
     }
     catch(err){
         res.status(400).json(err.message);
@@ -188,8 +206,8 @@ exports.getActiveUsers = async(req,res) => {
 
 exports.getInActiveUsers = async(req,res) => {
     try{
-        const inactiveusers = await User.find({isActive:false});
-        res.status(200).json(inactiveusers);
+        const inactiveusers = await User.find({isActive:false}).lean();
+        res.status(200).json(inactiveusers.map(withCompletedPages));
     }
     catch(err){
         res.status(400).json(err.message);
@@ -290,9 +308,13 @@ exports.removeDrafts = async(req,res) => {
 exports.getDrafts = async(req,res) => {
   try{
     const drafts = await User.find({isDraft:true})
+      .select(
+        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence myerrors"
+      )
       .populate('admin','name')
-      .populate('packages','name');
-    res.status(200).json(drafts);
+      .populate('packages','name pages')
+      .lean();
+    res.status(200).json(drafts.map(withCompletedPages));
   }
   catch(err){
     res.status(500).json(err.message);
@@ -332,6 +354,27 @@ exports.getUser = async (req, res) => {
     res.status(200).json(user);
   } catch (err) {
     res.status(500).json(err.message);
+  }
+};
+
+exports.getUserForAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId)
+      .select(
+        "name email mobile isDeclared declaredAt date currentIndex isActive packages admin myerrors"
+      )
+      .populate("admin", "name")
+      .populate("packages", "name pages");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(withCompletedPages(user.toObject()));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -530,13 +573,13 @@ exports.targetsAchieved = async (req, res) => {
       .lean();
 
     const accomplishedUsers = users.filter(user =>
-      user.packages && hasTargetAchieved(user.packages, user.currentIndex)
+      user.packages && hasTargetAchieved(user.packages, getCompletedPages(user))
     );
 
     res.status(200).json({
       success: true,
       count: accomplishedUsers.length,
-      users: accomplishedUsers
+      users: accomplishedUsers.map(withCompletedPages)
     });
 
   } catch (err) {

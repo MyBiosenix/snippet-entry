@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "../Styles/macomp.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -198,7 +198,7 @@ function MuComp() {
   };
 
   // ── sort ──
-  const sortUsers = (data) => {
+  const sortUsers = useCallback((data) => {
     if (sortField === "expiry") {
       return [...data].sort((a, b) => {
         const dateA = new Date(a.date);
@@ -207,7 +207,7 @@ function MuComp() {
       });
     }
     return data;
-  };
+  }, [sortField, sortOrder]);
 
   // ── filter ──
   const filteredUsers = useMemo(() => {
@@ -243,7 +243,7 @@ function MuComp() {
 
   const sortedUsers = useMemo(
     () => sortUsers(filteredUsers),
-    [filteredUsers, sortField, sortOrder]
+    [filteredUsers, sortUsers]
   );
 
   // ── pagination ──
@@ -420,7 +420,7 @@ function MuComp() {
                       </div>
                     </td>
 
-                    <td>{u.currentIndex}/{getPackagePageLimit(u.packages)}</td>
+                    <td>{(u.completedPages ?? u.currentIndex ?? 0)}/{getPackagePageLimit(u.packages)}</td>
 
                     <td>{u.date ? new Date(u.date).toLocaleDateString() : "-"}</td>
 

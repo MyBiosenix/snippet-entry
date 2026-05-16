@@ -3,6 +3,7 @@ import '../Styles/login.css'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios';
 import { API_BASE } from '../../utils/api';
+import { clearAdminSession, storeAdminSession } from '../../utils/auth';
 
 function AdminLogin() {
     const [email, setEmail] = useState('');
@@ -38,10 +39,8 @@ function AdminLogin() {
             email,password
           });
           alert('Login Succesful');
-          localStorage.setItem('adminToken',res.data.token);
-          localStorage.setItem('token',res.data.token);
-          localStorage.setItem('admin', JSON.stringify(res.data.admin));
-          localStorage.setItem('adminId', res.data.admin.id);
+          clearAdminSession();
+          storeAdminSession({ token: res.data.token, admin: res.data.admin });
           navigate('/admin/home')
         }
         catch(err){

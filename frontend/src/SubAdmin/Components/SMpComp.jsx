@@ -13,7 +13,6 @@ function SMpComp() {
   const fetchPackages = async () => {
     try {
       const res = await axios.get(`${API_BASE}/package/all-packages`);
-      console.log("API Response:", res.data);
       setPackages(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Error Fetching Packages');

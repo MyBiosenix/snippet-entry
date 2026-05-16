@@ -3,6 +3,7 @@ import { FaUser, FaUserShield, FaUsers, FaBoxOpen, FaQuestionCircle, FaUserCheck
 import { FiMenu } from 'react-icons/fi'
 import '../../User/Styles/header.css'
 import { useNavigate } from 'react-router-dom'
+import { clearSubAdminSession } from '../../utils/auth';
 
 function Header() {
     const navigate = useNavigate();
@@ -23,11 +24,7 @@ function Header() {
         const confirmLogout = window.confirm('Do You Really want to Logout?');
 
         if(confirmLogout){
-            localStorage.removeItem('subadmin');
-            localStorage.removeItem('subAdminToken');
-            localStorage.removeItem('token');
-            localStorage.removeItem('adminId');
-
+            clearSubAdminSession();
             navigate('/sub-admin/login');
         }
     }

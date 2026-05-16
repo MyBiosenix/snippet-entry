@@ -3,6 +3,7 @@ import { FaUser, FaUserShield, FaUsers, FaBoxOpen, FaQuestionCircle, FaUserCheck
 import { FiMenu } from 'react-icons/fi'
 import '../../User/Styles/header.css'
 import { useNavigate } from 'react-router-dom'
+import { clearAdminSession } from '../../utils/auth';
 
 function Header() {
     const navigate = useNavigate();
@@ -26,11 +27,7 @@ function Header() {
         const confirmLogout = window.confirm("Do you really want to log out?");
 
         if(confirmLogout){
-            localStorage.removeItem('admin');
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('token');
-            localStorage.removeItem('adminId');
-
+            clearAdminSession();
             navigate('/admin/login');
         }
     }

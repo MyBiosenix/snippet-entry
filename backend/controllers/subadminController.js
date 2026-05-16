@@ -4,6 +4,19 @@ const User = require('../models/User');
 const { hasTargetAchieved } = require('../utils/packageRules');
 const env = require('../config/env');
 
+function getCompletedPages(user) {
+  return Array.isArray(user?.myerrors) ? user.myerrors.length : 0;
+}
+
+function withCompletedPages(user) {
+  if (!user) return user;
+
+  return {
+    ...user,
+    completedPages: getCompletedPages(user),
+  };
+}
+
 exports.login = async(req,res) => {
     try{
         const {email, password} = req.body;
@@ -19,12 +32,13 @@ exports.login = async(req,res) => {
         const token = jwt.sign(
             {id:admin._id, role:admin.role},
             env.jwtSecret,
-            {expiresIn:'1h'}
+            {expiresIn: env.subAdminJwtExpiresIn}
         )
 
         res.status(200).json({
             message:'Login Succesful',
             token,
+            expiresIn: env.subAdminJwtExpiresIn,
             subadmin:{
                 id:admin._id,
                 name:admin.name,
@@ -77,7 +91,7 @@ exports.getDashStats = async (req, res) => {
       .lean();
 
     const targetsAchievedUsers = users.filter(user =>
-      user.packages && hasTargetAchieved(user.packages, user.currentIndex)
+      user.packages && hasTargetAchieved(user.packages, getCompletedPages(user))
     );
 
     /* ---------- RESPONSE ---------- */
@@ -106,9 +120,10 @@ exports.getMyUsers = async(req,res) => {
 
         const users = await User.find({admin:adminId})
         .populate('packages','name')
-        .select('-__v');
+        .select('-__v')
+        .lean();
         
-        res.status(200).json(users);
+        res.status(200).json(users.map(withCompletedPages));
     }
     catch(err){
         res.status(500).json({message: err.message});

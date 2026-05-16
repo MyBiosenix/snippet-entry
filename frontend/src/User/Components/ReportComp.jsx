@@ -97,7 +97,7 @@ function ReportComp() {
     http.get(`/snippet/user-visible/${userId}`)
       .then((res) => res.data)
       .then((data) => setResults(Array.isArray(data) ? data : []))
-      .catch((err) => console.error(err));
+      .catch(() => setResults([]));
   }, [userId, canShowReport]);
 
   useEffect(() => {
