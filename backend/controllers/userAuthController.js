@@ -5,9 +5,18 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { getPackagePageLimit, hasTargetAchieved } = require('../utils/packageRules');
 const env = require('../config/env');
+const {
+  buildPaginatedResponse,
+  escapeRegex,
+  parsePaginationQuery,
+} = require("../utils/pagination");
 
 function getCompletedPages(user) {
-  return Array.isArray(user?.myerrors) ? user.myerrors.length : 0;
+  if (Array.isArray(user?.myerrors)) {
+    return user.myerrors.length;
+  }
+
+  return Number(user?.currentIndex) || 0;
 }
 
 function withCompletedPages(user) {
@@ -17,6 +26,205 @@ function withCompletedPages(user) {
     ...user,
     completedPages: getCompletedPages(user),
   };
+}
+
+const USER_LIST_SELECT =
+  "name email mobile paymentoptions price isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence";
+
+const USER_PROFILE_SELECT =
+  "name email mobile price paymentoptions date isActive isDeclared declaredAt isComplete softwareUsed notInSequence admin packages";
+
+function buildUserSort(sortBy = "date", sortOrder = "desc") {
+  const direction = sortOrder === "asc" ? 1 : -1;
+
+  switch (sortBy) {
+    case "name":
+      return { name: direction, _id: 1 };
+    case "email":
+      return { email: direction, _id: 1 };
+    case "admin":
+      return { "admin.name": direction, name: 1, _id: 1 };
+    case "package":
+      return { "packages.name": direction, name: 1, _id: 1 };
+    case "completedPages":
+      return { completedPages: direction, _id: 1 };
+    case "isActive":
+      return { isActive: direction, name: 1, _id: 1 };
+    default:
+      return { date: direction, _id: 1 };
+  }
+}
+
+async function getPaginatedUsers(req, res, options = {}) {
+  const {
+    page,
+    limit,
+    skip,
+    sortBy,
+    sortOrder,
+    search,
+  } = parsePaginationQuery(req.query, {
+    defaultLimit: 10,
+    defaultSortBy: "date",
+    defaultSortOrder: "desc",
+    allowedSortFields: ["date", "name", "email", "admin", "package", "completedPages", "isActive"],
+  });
+
+  const baseMatch = {};
+
+  if (typeof options.isActive === "boolean") {
+    baseMatch.isActive = options.isActive;
+  }
+
+  if (typeof options.isDraft === "boolean") {
+    baseMatch.isDraft = options.isDraft;
+  }
+
+  if (options.adminId) {
+    baseMatch.admin = new mongoose.Types.ObjectId(options.adminId);
+  }
+
+  if (options.expiringSoon) {
+    const today = new Date();
+    const next4Days = new Date();
+    next4Days.setDate(today.getDate() + 4);
+    baseMatch.date = { $gte: today, $lte: next4Days };
+  }
+
+  const regex = search ? new RegExp(escapeRegex(search), "i") : null;
+
+  const pipeline = [
+    { $match: baseMatch },
+    {
+      $lookup: {
+        from: "admins",
+        localField: "admin",
+        foreignField: "_id",
+        as: "adminData",
+      },
+    },
+    {
+      $lookup: {
+        from: "packages",
+        localField: "packages",
+        foreignField: "_id",
+        as: "packageData",
+      },
+    },
+    {
+      $addFields: {
+        adminData: { $arrayElemAt: ["$adminData", 0] },
+        packageData: { $arrayElemAt: ["$packageData", 0] },
+      },
+    },
+    {
+      $addFields: {
+        completedPages: {
+          $let: {
+            vars: { errorCount: { $size: { $ifNull: ["$myerrors", []] } } },
+            in: {
+              $cond: [
+                { $gt: ["$$errorCount", 0] },
+                "$$errorCount",
+                { $ifNull: ["$currentIndex", 0] },
+              ],
+            },
+          },
+        },
+        admin: {
+          _id: "$adminData._id",
+          name: "$adminData.name",
+        },
+        packages: {
+          _id: "$packageData._id",
+          name: "$packageData.name",
+          pages: "$packageData.pages",
+        },
+        searchDate: {
+          $dateToString: {
+            format: "%d/%m/%Y",
+            date: "$date",
+            timezone: "Asia/Calcutta",
+          },
+        },
+      },
+    },
+  ];
+
+  if (options.targetsAchieved) {
+    pipeline.push({
+      $match: {
+        $expr: {
+          $gte: [
+            "$completedPages",
+            { $multiply: [{ $ifNull: ["$packageData.pages", 0] }, 0.75] },
+          ],
+        },
+      },
+    });
+  }
+
+  if (regex) {
+    const searchMatch = {
+      $or: [
+        { name: regex },
+        { email: regex },
+        { "adminData.name": regex },
+        { "packageData.name": regex },
+        { searchDate: regex },
+      ],
+    };
+
+    const lowerSearch = search.toLowerCase();
+
+    if ("active".includes(lowerSearch)) {
+      searchMatch.$or.push({ isActive: true });
+    }
+
+    if ("inactive".includes(lowerSearch) || "deactivated".includes(lowerSearch)) {
+      searchMatch.$or.push({ isActive: false });
+    }
+
+    if ("draft".includes(lowerSearch)) {
+      searchMatch.$or.push({ isDraft: true });
+    }
+
+    if ("complete".includes(lowerSearch)) {
+      searchMatch.$or.push({ isComplete: true });
+    }
+
+    if ("incomplete".includes(lowerSearch)) {
+      searchMatch.$or.push({ isComplete: false });
+    }
+
+    if ("software".includes(lowerSearch)) {
+      searchMatch.$or.push({ softwareUsed: true });
+    }
+
+    if ("sequence".includes(lowerSearch)) {
+      searchMatch.$or.push({ notInSequence: true });
+    }
+
+    pipeline.push({ $match: searchMatch });
+  }
+
+  const countPipeline = [...pipeline, { $count: "total" }];
+  const dataPipeline = [
+    ...pipeline,
+    { $project: { myerrors: 0, lastLoginSession: 0, adminData: 0, packageData: 0 } },
+    { $sort: buildUserSort(sortBy, sortOrder) },
+    { $skip: skip },
+    { $limit: limit },
+  ];
+
+  const [data, countResult] = await Promise.all([
+    User.aggregate(dataPipeline),
+    User.aggregate(countPipeline),
+  ]);
+
+  const total = countResult[0]?.total || 0;
+
+  return res.status(200).json(buildPaginatedResponse(data, page, limit, total));
 }
 
 exports.login = async (req, res) => {
@@ -147,15 +355,7 @@ exports.createUser = async (req, res) => {
 
 exports.getUsers = async (req, res) => {
   try {
-    const allUsers = await User.find()
-      .select(
-        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence myerrors"
-      )
-      .populate("admin", "name")
-      .populate("packages", "name pages")
-      .lean();
-
-    res.status(200).json(allUsers.map(withCompletedPages));
+    return getPaginatedUsers(req, res);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -196,21 +396,19 @@ exports.deactivateUser = async(req,res) => {
 
 exports.getActiveUsers = async(req,res) => {
     try{
-        const activeusers = await User.find({isActive:true}).lean();
-        res.status(200).json(activeusers.map(withCompletedPages));
+        return getPaginatedUsers(req, res, { isActive: true });
     }
     catch(err){
-        res.status(400).json(err.message);
+        res.status(400).json({ message: err.message });
     }
 }
 
 exports.getInActiveUsers = async(req,res) => {
     try{
-        const inactiveusers = await User.find({isActive:false}).lean();
-        res.status(200).json(inactiveusers.map(withCompletedPages));
+        return getPaginatedUsers(req, res, { isActive: false });
     }
     catch(err){
-        res.status(400).json(err.message);
+        res.status(400).json({ message: err.message });
     }
 }
 
@@ -307,17 +505,10 @@ exports.removeDrafts = async(req,res) => {
 
 exports.getDrafts = async(req,res) => {
   try{
-    const drafts = await User.find({isDraft:true})
-      .select(
-        "name email mobile paymentoptions price password isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence myerrors"
-      )
-      .populate('admin','name')
-      .populate('packages','name pages')
-      .lean();
-    res.status(200).json(drafts.map(withCompletedPages));
+    return getPaginatedUsers(req, res, { isDraft: true });
   }
   catch(err){
-    res.status(500).json(err.message);
+    res.status(500).json({ message: err.message });
   }
 }
 
@@ -348,8 +539,10 @@ exports.getUser = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id)
+      .select(USER_PROFILE_SELECT)
       .populate("admin", "name")
-      .populate("packages", "name");
+      .populate("packages", "name pages")
+      .lean();
     // lean() not needed — mongoose doc is fine
     res.status(200).json(user);
   } catch (err) {
@@ -363,16 +556,17 @@ exports.getUserForAdmin = async (req, res) => {
 
     const user = await User.findById(userId)
       .select(
-        "name email mobile isDeclared declaredAt date currentIndex isActive packages admin myerrors"
+        "name email mobile isDeclared declaredAt date currentIndex isActive packages admin isComplete softwareUsed notInSequence"
       )
       .populate("admin", "name")
-      .populate("packages", "name pages");
+      .populate("packages", "name pages")
+      .lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(withCompletedPages(user.toObject()));
+    res.status(200).json(withCompletedPages(user));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -384,8 +578,10 @@ exports.fetchStats = async (req, res) => {
 
     
     const user = await User.findById(id)
+      .select("name date currentIndex packages admin isDeclared isComplete softwareUsed notInSequence")
       .populate("packages", "name pages")
-      .populate("admin", "name");
+      .populate("admin", "name")
+      .lean();
 
     if (!user) {
       return res.status(404).json({ message: "User Not Found" });
@@ -394,7 +590,7 @@ exports.fetchStats = async (req, res) => {
     
     const goal = getPackagePageLimit(user.packages);
 
-    const completed = user.myerrors?.length || 0;
+    const completed = getCompletedPages(user);
 
     const underReview = goal - completed >= 0 ? goal - completed : 0;
 
@@ -406,6 +602,10 @@ exports.fetchStats = async (req, res) => {
       underReview,
       validTill: user.date,
       admin: user.admin?.name || "N/A",
+      isDeclared: !!user.isDeclared,
+      isComplete: user.isComplete === false ? false : true,
+      softwareUsed: !!user.softwareUsed,
+      notInSequence: !!user.notInSequence,
     };
 
     res.status(200).json(dashboardData);
@@ -535,30 +735,7 @@ exports.unmarkNotInSequence = async (req, res) => {
 
 exports.getExpiringSoonUsers = async(req,res) => {
   try{
-    const today = new Date();
-    const next4Days = new Date();
-    next4Days.setDate(today.getDate() + 4);
-
-    const expiringSoonUsers = await User.find({
-      date:{
-        $gte:today,
-        $lte:next4Days
-      }
-    }).populate("packages admin");
-
-    const expiringSoonCount = await User.countDocuments({
-      date:{
-        $gte:today,
-        $lte:next4Days
-      }
-    });
-
-    res.status(200).json({
-      success:true,
-      totalExpiringSoon:expiringSoonCount,
-      users:expiringSoonUsers
-    });
-
+    return getPaginatedUsers(req, res, { expiringSoon: true });
   }
   catch(err){
     console.error("Error Fectching Expiring soon users:", err);
@@ -568,20 +745,7 @@ exports.getExpiringSoonUsers = async(req,res) => {
 
 exports.targetsAchieved = async (req, res) => {
   try {
-    const users = await User.find()
-      .populate("packages")
-      .lean();
-
-    const accomplishedUsers = users.filter(user =>
-      user.packages && hasTargetAchieved(user.packages, getCompletedPages(user))
-    );
-
-    res.status(200).json({
-      success: true,
-      count: accomplishedUsers.length,
-      users: accomplishedUsers.map(withCompletedPages)
-    });
-
+    return getPaginatedUsers(req, res, { targetsAchieved: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });

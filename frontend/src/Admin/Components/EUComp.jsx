@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import '../Styles/macomp.css';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -6,29 +6,44 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { API_BASE } from "../../utils/api";
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse, useDebouncedValue } from "../../utils/pagination";
 
 function EUComp() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchTerm);
+
   const admin = JSON.parse(localStorage.getItem('admin'));
   const role = admin?.role;
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE}/auth/expiring-soon`);
-      setUsers(res.data.users|| []);
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/auth/expiring-soon`, {
+        params: {
+          page: currentPage,
+          limit: 10,
+          search: debouncedSearch,
+        },
+      });
+      const { data, pagination: nextPagination } = unwrapPaginatedResponse(res.data);
+      setUsers(data);
+      setPagination(nextPagination);
     } catch (err) {
       alert(err.response?.data?.message || 'Error fetching users');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearch]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleActivate = async (id) => {
     try {
@@ -59,30 +74,12 @@ function EUComp() {
     }
   };
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
   const exportToExcel = () => {
-    const data = filteredUsers.map((u, i) => ({
-      "Sr No.": i + 1,
+    const data = users.map((u, i) => ({
+      "Sr No.": ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       "Name": u.name,
       "Package Taken": u.packages?.name || 'No Package',
       "Email": u.email,
-      "Password": u.password,
       "Status": u.isActive ? "Active" : "Inactive",
       "Expiry Date": new Date(u.date).toLocaleDateString()
     }));
@@ -97,13 +94,12 @@ function EUComp() {
     const doc = new jsPDF();
     doc.text("Users List", 14, 15);
 
-    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Password", "Status", "Expiry Date"];
-    const tableRows = filteredUsers.map((u, i) => [
-      i + 1,
+    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Status", "Expiry Date"];
+    const tableRows = users.map((u, i) => [
+      ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       u.name,
       u.packages?.name || 'No Package',
       u.email,
-      u.password,
       u.isActive ? "Active" : "Inactive",
       new Date(u.date).toLocaleDateString()
     ]);
@@ -151,21 +147,25 @@ function EUComp() {
               <th>Name</th>
               <th>Package Taken</th>
               <th>Email Id</th>
-              <th>Password</th>
               <th>Status</th>
               <th>Expiry Date</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {currentItems.length > 0 ? (
-              currentItems.map((u, index) => (
+            {loading ? (
+              <tr>
+                <td colSpan='7' style={{ textAlign: 'center', color: 'gray' }}>
+                  Loading users...
+                </td>
+              </tr>
+            ) : users.length > 0 ? (
+              users.map((u, index) => (
                 <tr key={u._id}>
-                  <td>{indexOfFirstItem + index + 1}</td>
+                  <td>{((pagination?.page || 1) - 1) * (pagination?.limit || 10) + index + 1}</td>
                   <td>{u.name}</td>
                   <td>{u.packages?.name || 'No Package'}</td>
                   <td>{u.email}</td>
-                  <td>{u.password}</td>
                   <td>
                     {u.isActive ? (
                       <span style={{ color: 'green', fontWeight: 'bold' }}>Active</span>
@@ -212,7 +212,7 @@ function EUComp() {
               ))
             ) : (
               <tr>
-                <td colSpan='8' style={{ textAlign: 'center', color: 'gray' }}>
+                <td colSpan='7' style={{ textAlign: 'center', color: 'gray' }}>
                   No users found
                 </td>
               </tr>
@@ -220,21 +220,10 @@ function EUComp() {
           </tbody>
         </table>
 
-        {filteredUsers.length > 0 && (
-          <div className="pagination-container">
-            <div className="pagination">
-              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>«</button>
-              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>‹</button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
-              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>»</button>
-            </div>
-          </div>
-        )}
+        <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
       </div>
     </div>
   );
 }
 
 export default EUComp;
- 

@@ -4,17 +4,17 @@ import '../Styles/macomp.css'
 function UqComp() {
   return (
     <div className='comp'>
-        <h3>User Queries</h3>
+        <h3 className='h3'>User Queries</h3>
         <div className='incomp'>
             <div className='go'>
                 <h4>All Query List</h4>
             </div>
             <div className='go'>
                 <div className='mygo'>
-                    <p>Excel</p>
-                    <p>PDF</p>
+                    <p className='add-btn'>Excel</p>
+                    <p className='add-btn'> PDF</p>
                 </div>
-                <input type='text' placeholder='Search'/>
+                <input type='text' placeholder='Search' className='search'/>
             </div>
             <table>
                 <thead>

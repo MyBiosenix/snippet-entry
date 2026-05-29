@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import '../../Admin/Styles/macomp.css';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -8,35 +8,48 @@ import autoTable from "jspdf-autotable";
 import { getPackagePageLimit } from "../../utils/packageRules";
 import { API_BASE } from "../../utils/api";
 import { getSubAdminToken } from "../../utils/auth";
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse, useDebouncedValue } from "../../utils/pagination";
 
 function SMuComp() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState("asc");
-  const itemsPerPage = 10;
-  
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchTerm);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = getSubAdminToken();
+      const res = await axios.get(`${API_BASE}/sub-admin/getusers`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          page: currentPage,
+          limit: 10,
+          search: debouncedSearch,
+          sortBy: "date",
+          sortOrder,
+        },
+      });
+      const { data, pagination: nextPagination } = unwrapPaginatedResponse(res.data);
+      setUsers(data);
+      setPagination(nextPagination);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error fetching users');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, debouncedSearch, sortOrder]);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-        const token = getSubAdminToken();
-        const res = await axios.get(`${API_BASE}/sub-admin/getusers`,{
-            headers:{
-                Authorization:`Bearer ${token}`
-            }
-        });
-        setUsers(res.data);
-        } catch (err) {
-        alert(err.response?.data?.message || 'Error fetching users');
-        }
-    };
+  }, [fetchUsers]);
 
   const handleActivate = async (id) => {
     try {
@@ -56,42 +69,12 @@ function SMuComp() {
     }
   };
 
-  const sortUsers = (data) => {
-    if (sortField === "expiry") {
-      return [...data].sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-      });
-    }
-    return data;
-  };
-
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const sortedUsers = sortUsers(filteredUsers);
-  const currentItems = sortedUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
   const exportToExcel = () => {
-    const data = filteredUsers.map((u, i) => ({
-      "Sr No.": i + 1,
+    const data = users.map((u, i) => ({
+      "Sr No.": ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       "Name": u.name,
       "Package Taken": u.packages?.name || 'No Package',
       "Email": u.email,
-      "Password": u.password,
       "Status": u.isActive ? "Active" : "Inactive",
       "Expiry Date": new Date(u.date).toLocaleDateString()
     }));
@@ -106,13 +89,12 @@ function SMuComp() {
     const doc = new jsPDF();
     doc.text("Users List", 14, 15);
 
-    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Password", "Status", "Expiry Date"];
-    const tableRows = filteredUsers.map((u, i) => [
-      i + 1,
+    const tableColumn = ["Sr No.", "Name", "Package Taken", "Email", "Status", "Expiry Date"];
+    const tableRows = users.map((u, i) => [
+      ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       u.name,
       u.packages?.name || 'No Package',
       u.email,
-      u.password,
       u.isActive ? "Active" : "Inactive",
       new Date(u.date).toLocaleDateString()
     ]);
@@ -141,16 +123,15 @@ function SMuComp() {
             <p onClick={exportToExcel}>Excel</p>
             <p onClick={exportToPDF}>PDF</p>
           </div>
-          <p 
-              style={{ cursor: "pointer", background:'#2575fc', color:'White', padding: '10px 20px', borderRadius:'10px' }}
-              onClick={() => {
-                setSortField("expiry");
-                setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                setCurrentPage(1);
-              }}
-            >
-              Expiry: {sortOrder === "asc" ? "↑" : "↓"}
-            </p>
+          <p
+            style={{ cursor: "pointer", background:'#2575fc', color:'White', padding: '10px 20px', borderRadius:'10px' }}
+            onClick={() => {
+              setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+              setCurrentPage(1);
+            }}
+          >
+            Expiry: {sortOrder === "asc" ? "â†‘" : "â†“"}
+          </p>
 
           <input
             type='text'
@@ -171,22 +152,26 @@ function SMuComp() {
               <th>Name</th>
               <th>Package Taken</th>
               <th>Email Id</th>
-              <th>Password</th>
               <th>Status</th>
-              <th>Goal Status</th>  
+              <th>Goal Status</th>
               <th>Expiry Date</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {currentItems.length > 0 ? (
-              currentItems.map((u, index) => (
+            {loading ? (
+              <tr>
+                <td colSpan='8' style={{ textAlign: 'center', color: 'gray' }}>
+                  Loading users...
+                </td>
+              </tr>
+            ) : users.length > 0 ? (
+              users.map((u, index) => (
                 <tr key={u._id}>
-                  <td>{indexOfFirstItem + index + 1}</td>
+                  <td>{((pagination?.page || 1) - 1) * (pagination?.limit || 10) + index + 1}</td>
                   <td>{u.name}</td>
                   <td>{u.packages?.name || 'No Package'}</td>
                   <td>{u.email}</td>
-                  <td>{u.password}</td>
                   <td>
                     {u.isActive ? (
                       <span style={{ color: 'green', fontWeight: 'bold' }}>Active</span>
@@ -227,21 +212,10 @@ function SMuComp() {
           </tbody>
         </table>
 
-        {filteredUsers.length > 0 && (
-          <div className="pagination-container">
-            <div className="pagination">
-              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>«</button>
-              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>‹</button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
-              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>»</button>
-            </div>
-          </div>
-        )}
+        <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
       </div>
     </div>
   );
 }
 
 export default SMuComp;
- 

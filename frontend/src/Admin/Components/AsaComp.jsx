@@ -95,34 +95,58 @@ function AsaComp() {
   };
 
   return (
-    <div className="asacomp">
-      <h3>{adminToEdit ? 'Edit Admin':'Add User'}</h3>
-      <div className="inasacomp">
-        <h4>Enter Basic Details</h4>
-        <div className="form">
-          <input type="text" placeholder="Enter Name*" value={name} required onChange={(e) => setName(e.target.value)}/>
-          {nameError && <p className="error">{nameError}</p>}
+   <div className="asacomp">
+  <h3>{adminToEdit ? 'Edit admin' : 'Add admin'}</h3>
+  <div className="inasacomp">
+    <h4>Enter basic details</h4>
+    <div className="form">
 
-          <input type="email" placeholder="Enter Email Id*" value={email} required onChange={(e) => setEmail(e.target.value)}/>
-          {emailError && <p className="error">{emailError}</p>}
-
-          <select value={role} onChange={handleChange} required>
-            <option value="">Select Admin Type</option>
-            <option value="superadmin">Super Admin</option>
-            <option value="admin">Admin</option>
-          </select>
-
-          <input type="text" placeholder="Enter Password*" value={password} required onChange={(e) => setPassword(e.target.value)}/>
-          {passwordError && <p className="error">{passwordError}</p>}
-
-          <input type="text" placeholder="Confirm Password" value={cnfpassword} required onChange={(e) => setcnfPassword(e.target.value)}/>
-        </div>
-        <div className="bttns">
-          <button className="cancel" onClick={() => navigate('/admin/manage-admin')}>Cancel</button>
-          <button className="submit" onClick={handlesubmit}>Submit</button>
-        </div>
+      <div className="field">
+        <label>Full name <span style={{color:'#dc2626'}}>*</span></label>
+        <input type="text" placeholder="e.g. Rohit Sharma"
+          className={nameError ? 'has-err' : ''}
+          value={name} onChange={(e) => setName(e.target.value)} />
+        {nameError && <p className="error">{nameError}</p>}
       </div>
+
+      <div className="field">
+        <label>Email address <span style={{color:'#dc2626'}}>*</span></label>
+        <input type="email" placeholder="e.g. rohit@example.com"
+          className={emailError ? 'has-err' : ''}
+          value={email} onChange={(e) => setEmail(e.target.value)} />
+        {emailError && <p className="error">{emailError}</p>}
+      </div>
+
+      <div className="field">
+        <label>Admin type <span style={{color:'#dc2626'}}>*</span></label>
+        <select value={role} onChange={handleChange}>
+          <option value="">Select admin type</option>
+          <option value="superadmin">Super admin</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div className="field">
+        <label>Password <span style={{color:'#dc2626'}}>*</span></label>
+        <input type="password" placeholder="Min. 8 characters"
+          className={passwordError ? 'has-err' : ''}
+          value={password} onChange={(e) => setPassword(e.target.value)} />
+        {passwordError && <p className="error">{passwordError}</p>}
+      </div>
+
+      <div className="field">
+        <label>Confirm password <span style={{color:'#dc2626'}}>*</span></label>
+        <input type="password" placeholder="Re-enter password"
+          value={cnfpassword} onChange={(e) => setcnfPassword(e.target.value)} />
+      </div>
+
     </div>
+    <div className="bttns">
+      <button className="cancel" onClick={() => navigate('/admin/manage-admin')}>Cancel</button>
+      <button className="submit" onClick={handlesubmit}>Save admin</button>
+    </div>
+  </div>
+</div>
   );
 }
 

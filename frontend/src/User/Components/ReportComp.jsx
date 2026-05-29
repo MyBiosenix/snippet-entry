@@ -5,7 +5,9 @@ import { saveAs } from "file-saver";
 import "../Styles/reports.css";
 import { useNavigate } from "react-router-dom";
 import http from "../../utils/http";
-
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse } from "../../utils/pagination";
+import "../Styles/cp.css"; // For shared styles like .back
 Modal.setAppElement("#root");
 
 function StatusCard({ title, message, tone = "neutral", onBack }) {
@@ -16,7 +18,9 @@ function StatusCard({ title, message, tone = "neutral", onBack }) {
 
   return (
     <div className="report-page">
-      <p className="back" onClick={onBack}>Back</p>
+      <p className="back-btn" onClick={onBack}>
+        <span>←</span> Back
+      </p>
       <div
         style={{
           maxWidth: 900, margin: "30px auto", padding: 20,
@@ -39,6 +43,9 @@ function ReportComp() {
   const [results, setResults] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loadingResults, setLoadingResults] = useState(false);
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -94,15 +101,52 @@ function ReportComp() {
   useEffect(() => {
     if (!userId || !canShowReport) return;
 
-    http.get(`/snippet/user-visible/${userId}`)
-      .then((res) => res.data)
-      .then((data) => setResults(Array.isArray(data) ? data : []))
-      .catch(() => setResults([]));
-  }, [userId, canShowReport]);
+    setLoadingResults(true);
+
+    http.get(`/snippet/user-visible/${userId}`, {
+      params: {
+        page: currentPage,
+        limit: 20,
+        sortBy: "pageNumber",
+        sortOrder: "asc",
+      },
+    })
+      .then((res) => unwrapPaginatedResponse(res.data))
+      .then(({ data, pagination: nextPagination }) => {
+        setResults(Array.isArray(data) ? data : []);
+        setPagination(nextPagination);
+      })
+      .catch(() => setResults([]))
+      .finally(() => setLoadingResults(false));
+  }, [userId, canShowReport, currentPage]);
 
   useEffect(() => {
     if (selectedIndex >= results.length) setSelectedIndex(0);
   }, [results, selectedIndex]);
+
+  const fetchAllVisibleResults = async () => {
+    const allRows = [];
+    let page = 1;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const res = await http.get(`/snippet/user-visible/${userId}`, {
+        params: {
+          page,
+          limit: 100,
+          sortBy: "pageNumber",
+          sortOrder: "asc",
+        },
+      });
+
+      const { data, pagination: nextPagination } = unwrapPaginatedResponse(res.data);
+      allRows.push(...(Array.isArray(data) ? data : []));
+      hasNextPage = Boolean(nextPagination?.hasNextPage);
+      page += 1;
+    }
+
+    return allRows;
+  };
 
   function highlightErrors(original = "", userText = "") {
     const normalize = (s = "") =>
@@ -154,6 +198,8 @@ function ReportComp() {
 
   const handleConfirmDownload = async () => {
     if (!results || results.length === 0) return;
+    const allResults = await fetchAllVisibleResults();
+    if (!allResults.length) return;
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Typing Report");
     sheet.mergeCells("A1:F1");
@@ -176,7 +222,7 @@ function ReportComp() {
       cell.border = { top:{style:"thin"},left:{style:"thin"},bottom:{style:"thin"},right:{style:"thin"} };
     });
     let totalErrorSum = 0;
-    results.forEach((r, idx) => {
+    allResults.forEach((r, idx) => {
       const total = Number(r.totalErrorPercentage || 0);
       totalErrorSum += total;
       const row = sheet.addRow([`Page ${r.pageNumber || idx + 1}`,r.capitalSmall,r.punctuation,r.missingExtraWord,r.spelling,total.toFixed(2)]);
@@ -273,7 +319,9 @@ function ReportComp() {
 
       <h2 className="report-title">Data Conversion Reports</h2>
 
-      {results.length > 0 && (
+      {loadingResults ? <p className="no-report">Loading report...</p> : null}
+
+      {!loadingResults && results.length > 0 && (
         <div className="snippet-buttons">
           {results.map((r, idx) => (
             <button
@@ -290,7 +338,9 @@ function ReportComp() {
         </div>
       )}
 
-      {results.length === 0 && (
+      <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
+
+      {!loadingResults && results.length === 0 && (
         <p className="no-report">Result declared, but no visible pages available yet.</p>
       )}
 

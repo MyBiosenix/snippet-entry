@@ -67,4 +67,9 @@ const UserSchema = new mongoose.Schema({
   },
 });
 
+UserSchema.index({ isActive: 1, date: 1 });
+UserSchema.index({ admin: 1, isActive: 1 });
+UserSchema.index({ admin: 1, date: 1 });
+UserSchema.index({ packages: 1 });
+
 module.exports = mongoose.model("User", UserSchema);

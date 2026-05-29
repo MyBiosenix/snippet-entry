@@ -1,35 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import '../../Admin/Styles/macomp.css';
 import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { API_BASE } from "../../utils/api";
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse, useDebouncedValue } from "../../utils/pagination";
 
 function SMpComp() {
   const [packages, setPackages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchTerm);
 
-  const fetchPackages = async () => {
+  const fetchPackages = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE}/package/all-packages`);
-      setPackages(res.data);
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/package/all-packages`, {
+        params: {
+          page: currentPage,
+          limit: 10,
+          search: debouncedSearch,
+        },
+      });
+      const { data, pagination: nextPagination } = unwrapPaginatedResponse(res.data);
+      setPackages(data);
+      setPagination(nextPagination);
     } catch (err) {
       alert(err.response?.data?.message || 'Error Fetching Packages');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const filteredPackages = packages.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  }, [currentPage, debouncedSearch]);
 
   useEffect(() => {
     fetchPackages();
-  }, []);
+  }, [fetchPackages]);
 
   const exportToExcel = () => {
-    const data = filteredPackages.map((p, i) => ({
-      "Sr No.": i + 1,
+    const data = packages.map((p, i) => ({
+      "Sr No.": ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       "Package Name": p.name,
       "Price (Per Paragraph)": p.price,
     }));
@@ -46,8 +59,8 @@ function SMpComp() {
     doc.text("Packages List", 14, 15);
 
     const tableColumn = ["Sr No.", "Package Name", "Price (Per Paragraph)"];
-    const tableRows = filteredPackages.map((p, i) => [
-      i + 1,
+    const tableRows = packages.map((p, i) => [
+      ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       p.name,
       p.price,
     ]);
@@ -80,7 +93,10 @@ function SMpComp() {
             type='text'
             className='search'
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder='Search'
           />
         </div>
@@ -94,10 +110,16 @@ function SMpComp() {
             </tr>
           </thead>
           <tbody>
-            {filteredPackages.length > 0 ? (
-              filteredPackages.map((p, index) => (
+            {loading ? (
+              <tr>
+                <td colSpan='3' style={{ textAlign: 'center', color: 'gray' }}>
+                  Loading packages...
+                </td>
+              </tr>
+            ) : packages.length > 0 ? (
+              packages.map((p, index) => (
                 <tr key={p._id}>
-                  <td>{index + 1}</td>
+                  <td>{((pagination?.page || 1) - 1) * (pagination?.limit || 10) + index + 1}</td>
                   <td>{p.name}</td>
                   <td>{p.price}</td>
                 </tr>
@@ -111,6 +133,7 @@ function SMpComp() {
             )}
           </tbody>
         </table>
+        <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
       </div>
     </div>
   );

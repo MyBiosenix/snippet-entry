@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from "../../utils/api";
 import { getAdminToken } from "../../utils/auth";
+import { unwrapPaginatedResponse } from "../../utils/pagination";
 
 function Dashboard() {
     const [admins, setAdmins] = useState(0);
@@ -41,8 +42,10 @@ function Dashboard() {
             const token = getAdminToken();
             const res = await axios.get(`${API_BASE}/auth/expiring-soon`, {
               headers: token ? { Authorization: `Bearer ${token}` } : {},
+              params: { page: 1, limit: 1 },
             })
-            setExpiringSoon(res.data.totalExpiringSoon);
+            const { pagination } = unwrapPaginatedResponse(res.data);
+            setExpiringSoon(pagination?.total || 0);
         }
         catch{
             setExpiringSoon(0);
@@ -54,8 +57,10 @@ function Dashboard() {
             const token = getAdminToken();
             const res = await axios.get(`${API_BASE}/auth/targets-achieved`, {
               headers: token ? { Authorization: `Bearer ${token}` } : {},
+              params: { page: 1, limit: 1 },
             })
-            setTargetsAchieved(res.data.count);
+            const { pagination } = unwrapPaginatedResponse(res.data);
+            setTargetsAchieved(pagination?.total || 0);
         }
         catch{
             setTargetsAchieved(0);
@@ -72,7 +77,7 @@ function Dashboard() {
     <div className='mydassh'>
         <h3>Dashboard</h3>
         <div className='boxes'>
-            <div className='box' onClick={()=>navigate('/admin/manage-admin')}>
+            <div className='box-purple' onClick={()=>navigate('/admin/manage-admin')}>
                 <FaUserShield className='icn'/>
                 <div className='inbox'>
                     <h5>Total Admins</h5>
@@ -80,7 +85,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box' onClick={()=>navigate('/admin/manage-user')}>
+            <div className='box-blue' onClick={()=>navigate('/admin/manage-user')}>
                 <FaUsers className='icn'/>
                 <div className='inbox'>
                     <h5>Total Users</h5>
@@ -88,7 +93,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box' onClick={() => navigate('/admin/active-users')}>
+            <div className='box-green' onClick={() => navigate('/admin/active-users')}>
                 <FaUserCheck className='icn'/>
                 <div className='inbox'>
                     <h5>Active Users</h5>
@@ -96,7 +101,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box' onClick={() => navigate('/admin/inactive-users')}>
+            <div className='box-red' onClick={() => navigate('/admin/inactive-users')}>
                 <FaUserSlash className='icn'/>
                 <div className='inbox'>
                     <h5>Deactivated Users</h5>
@@ -104,7 +109,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box' onClick={()=>navigate('/admin/expiring-users')}>
+            <div className='box-amber' onClick={()=>navigate('/admin/expiring-users')}>
                 <FaClock className='icn'/>
                 <div className='inbox'>
                     <h5>Expiring Soon</h5>
@@ -112,7 +117,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className='box' onClick={()=>navigate('/admin/targets-achieved')}>
+            <div className='box-teal' onClick={()=>navigate('/admin/targets-achieved')}>
                 <FaClock className='icn'/>
                 <div className='inbox'>
                     <h5>Targets Achieved</h5>

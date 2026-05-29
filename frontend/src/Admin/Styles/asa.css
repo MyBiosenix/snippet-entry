@@ -1,175 +1,127 @@
-.asa {
-  width: 100vw;
-  height: 100vh;
-}
-.asa h3{
-    margin: 0;
-}
 .asacomp {
-
-  margin: 40px auto;
-  padding: 10px 20px;
-  font-family: Arial, sans-serif;
+  padding: 1.5rem;
 }
 
 .asacomp h3 {
-  font-size: 26px;
-  margin-bottom: 20px;
-  color: #333;
+  font-size: 22px;
+  font-weight: 500;
+  color: #10213a;
+  margin: 0 0 1.25rem;
 }
 
+/* Panel */
 .inasacomp {
-  padding: 30px 25px;
-  background: radial-gradient(circle, #fdf5e6 0%, #f5deb3 100%);;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #fff;
+  border: 1px solid #d8e3f4;
+  border-radius: 16px;
+  padding: 2rem;
 }
 
 .inasacomp h4 {
-  font-size: 20px;
-  margin-bottom: 20px;
-  color: #444;
+  font-size: 18px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0 0 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e8f0fb;
 }
 
+/* Grid */
 .form {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 15px;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Each field wrapper — wrap every input+error in this */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 18px;
+  font-weight: 500;
+  color: #334155;
 }
 
 .form input,
 .form select {
-  padding: 12px 14px;
-  border: 1px solid #ccc;
-  background-color: white;
-  color: gray;
-  border-radius: 6px;
-  font-size: 15px;
+  padding: 10px 14px;
+  border: 1px solid #d1ddef;
+  border-radius: 10px;
+  font-size: 16px;
+  color: #1f2937;
+  background: #fff;
   outline: none;
-  transition: border 0.2s ease;
+  transition: border-color 0.2s;
+}
+
+.form input::placeholder {
+  color: #94a3b8;
 }
 
 .form input:focus,
 .form select:focus {
-  border: 1px solid #2575fc;
-  box-shadow: 0 0 4px rgba(37, 117, 252, 0.3);
+  border-color: #2575fc;
+  box-shadow: 0 0 0 3px rgba(37, 117, 252, 0.1);
 }
 
+.form input.has-err,
+.form select.has-err {
+  border-color: #fca5a5;
+}
+
+/* Inline error */
+.error {
+  font-size: 14px;
+  color: #dc2626;
+  margin: 0;
+}
+
+/* Footer */
 .bttns {
-  margin-top: 20px;
   display: flex;
-  gap: 15px;
+  align-items: center;
   justify-content: flex-end;
-}
-
-.bttns button {
-  padding: 10px 25px;
-  font-size: 15px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: 10px;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e8f0fb;
 }
 
 .bttns .cancel {
-  background: #eee;
-  color: #333;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.bttns .cancel:hover {
-  background: #ddd;
-}
+.bttns .cancel:hover { background: #e2e8f0; }
 
 .bttns .submit {
-  background: linear-gradient(135deg, #6a11cb, #2575fc);
-  color: white;
+  background: #2575fc;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 28px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.bttns .submit:hover {
-  opacity: 0.9;
-}
-.error{
-  display: block;
-  color: red;
-}
+.bttns .submit:hover { background: #1a5fd4; }
 
-@media screen and (max-width: 450px) {
-  .asacomp {
-    width: 100%;
-    box-sizing: border-box;
-    
-  }
-
-  .asacomp h3 {
-    font-size: 22px;
-    text-align: center;
-    margin-bottom: 15px;
-  }
-
-  .inasacomp {
-    padding: 20px 15px;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .inasacomp h4 {
-    font-size: 18px;
-    text-align: center;
-    margin-bottom: 15px;
-  }
-
-  .form {
-    display: flex;
-    flex-direction: column;
-    align-items:center;
-    gap: 15px;
-    padding: 10px;
-  }
-
-  .form input,
-  .form select {
-    width: 100%;
-    padding: 12px;
-    font-size: 15px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-  }
-
-  .error {
-    font-size: 14px;
-    color: red;
-    margin: -5px 0 5px 0;
-  }
-
-  .bttns {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .bttns button {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-    border-radius: 8px;
-  }
-
-  .bttns .cancel {
-    background: #f0f0f0;
-    color: #333;
-  }
-
-  .bttns .cancel:hover {
-    background: #e0e0e0;
-  }
-
-  .bttns .submit {
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
-    color: white;
-  }
-
-  .bttns .submit:hover {
-    opacity: 0.9;
-  }
+/* Responsive */
+@media (max-width: 600px) {
+  .asacomp { padding: 1rem; }
+  .form { grid-template-columns: 1fr; }
+  .bttns { flex-direction: column-reverse; }
+  .bttns .cancel,
+  .bttns .submit { width: 100%; text-align: center; padding: 12px; }
 }

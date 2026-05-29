@@ -2,6 +2,15 @@ const Snippets = require('../models/Snippet');
 const User = require('../models/User');
 const { evaluateSnippet } = require('../utils/evaluator')
 const { getPackagePageLimit } = require('../utils/packageRules');
+const mongoose = require("mongoose");
+const {
+  buildPaginatedResponse,
+  escapeRegex,
+  parsePaginationQuery,
+} = require("../utils/pagination");
+
+let snippetIdCache = null;
+let snippetIdCachePromise = null;
 
 function shuffleIds(ids) {
   return [...ids].sort(() => Math.random() - 0.5);
@@ -18,6 +27,20 @@ function getCompletedProgress(user) {
   return Math.max(submittedCount, maxPageNumber);
 }
 
+function isUserExpired(dateValue) {
+  if (!dateValue) {
+    return false;
+  }
+
+  const expiry = new Date(dateValue);
+  if (Number.isNaN(expiry.getTime())) {
+    return false;
+  }
+
+  expiry.setHours(23, 59, 59, 999);
+  return expiry.getTime() <= Date.now();
+}
+
 async function syncUserProgress(user) {
   const completedProgress = getCompletedProgress(user);
 
@@ -29,22 +52,154 @@ async function syncUserProgress(user) {
   return completedProgress;
 }
 
+async function getAllSnippetIds() {
+  if (Array.isArray(snippetIdCache) && snippetIdCache.length > 0) {
+    return snippetIdCache;
+  }
+
+  if (!snippetIdCachePromise) {
+    snippetIdCachePromise = Snippets.find().select("_id").lean()
+      .then((snippets) => {
+        snippetIdCache = snippets.map((snippet) => snippet._id);
+        return snippetIdCache;
+      })
+      .finally(() => {
+        snippetIdCachePromise = null;
+      });
+  }
+
+  return snippetIdCachePromise;
+}
+
+async function getPaginatedUserResults(req, res, options = {}) {
+  const { userId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: "Invalid user id" });
+  }
+  const {
+    page,
+    limit,
+    skip,
+    sortBy,
+    sortOrder,
+    search,
+  } = parsePaginationQuery(req.query, {
+    defaultLimit: 20,
+    defaultSortBy: "pageNumber",
+    defaultSortOrder: "asc",
+    allowedSortFields: ["pageNumber", "totalErrorPercentage", "createdAt", "editedAt"],
+  });
+
+  const basePipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+    { $unwind: "$myerrors" },
+  ];
+
+  if (options.visibleOnly) {
+    basePipeline.push({ $match: { "myerrors.visibleToUser": true } });
+  }
+
+  basePipeline.push(
+    {
+      $lookup: {
+        from: "snippets",
+        localField: "myerrors.snippetId",
+        foreignField: "_id",
+        as: "snippetData",
+      },
+    },
+    {
+      $addFields: {
+        snippetData: { $arrayElemAt: ["$snippetData", 0] },
+      },
+    }
+  );
+
+  if (search) {
+    const regex = new RegExp(escapeRegex(search), "i");
+    basePipeline.push({
+      $match: {
+        $or: [
+          { "myerrors.userText": regex },
+          { "snippetData.title": regex },
+          { "snippetData.content": regex },
+        ],
+      },
+    });
+  }
+
+  const sortMap = {
+    pageNumber: "myerrors.pageNumber",
+    totalErrorPercentage: "myerrors.totalErrorPercentage",
+    createdAt: "myerrors.createdAt",
+    editedAt: "myerrors.editedAt",
+  };
+
+  const mongoSortField = sortMap[sortBy] || "myerrors.pageNumber";
+  const mongoSort = { [mongoSortField]: sortOrder === "asc" ? 1 : -1, "myerrors._id": 1 };
+
+  const countPipeline = [...basePipeline, { $count: "total" }];
+  const dataPipeline = [
+    ...basePipeline,
+    { $sort: mongoSort },
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $project: {
+        _id: "$myerrors._id",
+        snippetId: {
+          _id: "$snippetData._id",
+          title: "$snippetData.title",
+          content: "$snippetData.content",
+        },
+        userText: "$myerrors.userText",
+        capitalSmall: "$myerrors.capitalSmall",
+        punctuation: "$myerrors.punctuation",
+        missingExtraWord: "$myerrors.missingExtraWord",
+        spelling: "$myerrors.spelling",
+        totalErrorPercentage: "$myerrors.totalErrorPercentage",
+        displayTokens: "$myerrors.displayTokens",
+        createdAt: "$myerrors.createdAt",
+        editedAt: "$myerrors.editedAt",
+        visibleToUser: "$myerrors.visibleToUser",
+        pageNumber: "$myerrors.pageNumber",
+      },
+    },
+  ];
+
+  const [rows, countResult] = await Promise.all([
+    User.aggregate(dataPipeline),
+    User.aggregate(countPipeline),
+  ]);
+
+  return res.json(buildPaginatedResponse(rows, page, limit, countResult[0]?.total || 0));
+}
+
 const getNextSnippet = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const user = await User.findById(userId).populate("packages", "name pages");
+    const user = await User.findById(userId)
+      .select("packages snippetOrder currentIndex myerrors date")
+      .populate("packages", "name pages");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const maxSnippets = getPackagePageLimit(user.packages);
-    const allSnippets = await Snippets.find().select("_id");
+    if (isUserExpired(user.date)) {
+      return res.json({
+        expired: true,
+        validTill: user.date,
+      });
+    }
 
-    if (!allSnippets.length) {
+    const maxSnippets = getPackagePageLimit(user.packages);
+    const allSnippetIds = await getAllSnippetIds();
+
+    if (!allSnippetIds.length) {
       return res.status(404).json({ message: "No snippets found in database" });
     }
 
     if (!user.snippetOrder || user.snippetOrder.length === 0) {
-      user.snippetOrder = shuffleIds(allSnippets.map((s) => s._id)).slice(0, maxSnippets);
+      user.snippetOrder = shuffleIds(allSnippetIds).slice(0, maxSnippets);
       user.currentIndex = 0;
       await user.save();
     }
@@ -64,9 +219,7 @@ const getNextSnippet = async (req, res) => {
     if (user.snippetOrder.length < maxSnippets) {
       const existingIds = new Set(user.snippetOrder.map((id) => String(id)));
       const missingPool = shuffleIds(
-        allSnippets
-          .map((snippet) => snippet._id)
-          .filter((id) => !existingIds.has(String(id)))
+        allSnippetIds.filter((id) => !existingIds.has(String(id)))
       );
 
       const needed = maxSnippets - user.snippetOrder.length;
@@ -77,17 +230,24 @@ const getNextSnippet = async (req, res) => {
     await syncUserProgress(user);
 
     if (user.currentIndex >= user.snippetOrder.length) {
-      return res.json({ done: true, message: "All snippets completed!" });
+      return res.json({
+        done: true,
+        expired: false,
+        validTill: user.date,
+        message: "All snippets completed!",
+      });
     }
 
     const snippetId = user.snippetOrder[user.currentIndex];
-    const snippet = await Snippets.findById(snippetId);
+    const snippet = await Snippets.findById(snippetId).lean();
 
     if (!snippet) {
       return res.status(404).json({ message: "Snippet not found" });
     }
 
     res.json({
+      expired: false,
+      validTill: user.date,
       snippetNumber: user.currentIndex + 1,
       totalSnippets: user.snippetOrder.length,
       snippet,
@@ -155,14 +315,12 @@ const submitSnippet = async (req, res) => {
 
 const getUserResults = async (req, res) => {
   try {
-    const { userId } = req.params;
-
-    const user = await User.findById(userId)
-      .populate("myerrors.snippetId", "title content");
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.json(user.myerrors);
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+    const existingUser = await User.exists({ _id: req.params.userId });
+    if (!existingUser) return res.status(404).json({ message: "User not found" });
+    return getPaginatedUserResults(req, res);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -209,16 +367,12 @@ const toggleVisibility = async (req, res) => {
 
 const getVisibleUserResults = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const user = await User.findById(userId)
-      .populate("myerrors.snippetId", "title content")
-      .lean();
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const visibleResults = user.myerrors.filter(err => err.visibleToUser === true);
-
-    res.json(visibleResults);
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+    const existingUser = await User.exists({ _id: req.params.userId });
+    if (!existingUser) return res.status(404).json({ message: "User not found" });
+    return getPaginatedUserResults(req, res, { visibleOnly: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -336,15 +490,16 @@ const editUserText = async (req, res) => {
 const showUser = async (req, res) => {
   try {
     const userId = req.params.userId || req.params.id;
-
-    const user = await User.findById(userId)
-      .populate("myerrors.snippetId", "title content"); 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+    const user = await User.exists({ _id: userId });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    return res.status(200).json(Array.isArray(user.myerrors) ? user.myerrors : []);
+    return getPaginatedUserResults(req, res);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch user snippets" });

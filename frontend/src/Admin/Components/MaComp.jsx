@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import '../Styles/macomp.css';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -6,20 +6,37 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { API_BASE } from "../../utils/api";
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse, useDebouncedValue } from "../../utils/pagination";
 
 function MaComp() {
   const navigate = useNavigate();
   const [admins, setAdmins] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchTerm);
 
-  const fetchAdmins = async () => {
+  const fetchAdmins = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE}/admin/all-admins`);
-      setAdmins(res.data);
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/admin/all-admins`, {
+        params: {
+          page: currentPage,
+          limit: 10,
+          search: debouncedSearch,
+        },
+      });
+      const { data, pagination: nextPagination } = unwrapPaginatedResponse(res.data);
+      setAdmins(data);
+      setPagination(nextPagination);
     } catch (err) {
       alert(err.response?.data?.message || 'Server Error');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearch]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this admin?')) {
@@ -32,22 +49,16 @@ function MaComp() {
     }
   };
 
-  const filteredAdmins = admins.filter(a =>
-    a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   useEffect(() => {
     fetchAdmins();
-  }, []);
+  }, [fetchAdmins]);
 
   const exportToExcel = () => {
-    const data = filteredAdmins.map((a, i) => ({
-      "Sr No.": i + 1,
+    const data = admins.map((a, i) => ({
+      "Sr No.": ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       "Name": a.name,
       "Admin Type": a.role,
       "Email": a.email,
-      "Password": a.password,
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -60,13 +71,12 @@ function MaComp() {
     const doc = new jsPDF();
     doc.text("Admins List", 14, 15);
 
-    const tableColumn = ["Sr No.", "Name", "Admin Type", "Email", "Password"];
-    const tableRows = filteredAdmins.map((a, i) => [
-      i + 1,
+    const tableColumn = ["Sr No.", "Name", "Admin Type", "Email"];
+    const tableRows = admins.map((a, i) => [
+      ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       a.name,
       a.role,
       a.email,
-      a.password
     ]);
 
     autoTable(doc, {
@@ -81,31 +91,27 @@ function MaComp() {
   };
 
   return (
-    <div className='comp'>
-      <h3>Manage Admins</h3>
+    
+ <div className='comp'>
+      <h3 className='h3'>Manage Admins</h3>
       <div className='incomp'>
-        <div className='go'>
-          <h4>All Admins List</h4>
-          <button
-            className='type'
-            onClick={() => navigate('/admin/manage-admin/add-admin')}
-          >
-            + Add SubAdmin
-          </button>
-        </div>
-        <div className='go'>
-          <div className='mygo'>
-            <p onClick={exportToExcel} style={{ cursor: 'pointer' }}>Excel</p>
-            <p onClick={exportToPDF} style={{ cursor: 'pointer' }}>PDF</p>
-          </div>
-          <input
-            type='text'
-            className='search'
-            placeholder='Search'
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+       <div className='toolbar-top'>
+  <h4>All Admins List</h4>
+  <button className='btn-primary' onClick={() => navigate('/admin/manage-admin/add-admin')}>
+    + Add SubAdmin
+  </button>
+</div>
+       <div className='toolbar-bottom'>
+  <div className='export-group'>
+    <button className='btn-export' onClick={exportToExcel}>↓ Excel</button>
+    <button className='btn-export' onClick={exportToPDF}>↓ PDF</button>
+  </div>
+  <div className='search-wrap'>
+    <input type='text' className='search' placeholder='Search admins…'
+      value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
+  </div>
+</div>
+<div className='table-wrapper'>
         <table>
           <thead>
             <tr>
@@ -113,19 +119,23 @@ function MaComp() {
               <th>Name</th>
               <th>Admin Type</th>
               <th>Email Id</th>
-              <th>Password</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {filteredAdmins.length > 0 ? (
-              filteredAdmins.map((a, index) => (
+            {loading ? (
+              <tr>
+                <td colSpan='5' style={{ textAlign: 'center', color: 'gray' }}>
+                  Loading admins...
+                </td>
+              </tr>
+            ) : admins.length > 0 ? (
+              admins.map((a, index) => (
                 <tr key={a._id}>
-                  <td>{index + 1}</td>
+                  <td>{((pagination?.page || 1) - 1) * (pagination?.limit || 10) + index + 1}</td>
                   <td>{a.name}</td>
-                  <td>{a.role}</td>
+                  <td><span className='role-badge'>{a.role}</span></td>
                   <td>{a.email}</td>
-                  <td>{a.password}</td>
                   <td className='mybtnnns'>
                     <button
                       className='edit'
@@ -148,16 +158,17 @@ function MaComp() {
               ))
             ) : (
               <tr>
-                <td colSpan='6' style={{ textAlign: 'center', color: 'gray' }}>
+                <td colSpan='5' style={{ textAlign: 'center', color: 'gray' }}>
                   No admins found
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+</div>
+        <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
       </div>
-    </div>
-  );
+    </div> );
 }
 
 export default MaComp;

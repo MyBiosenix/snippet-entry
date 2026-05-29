@@ -24,13 +24,11 @@ function Work() {
   const [captchaError, setCaptchaError] = useState("");
 
   const userId = localStorage.getItem("userId");
-  const token =
-    localStorage.getItem("userToken") || localStorage.getItem("token");
 
   // ✅ validity lock states
   const [validTill, setValidTill] = useState(null);
   const [isExpired, setIsExpired] = useState(false);
-  const [expiryChecked, setExpiryChecked] = useState(false);
+  const [expiryChecked, setExpiryChecked] = useState(true);
 
   // ✅ input security refs (mobile-safe)
   const lastInputTypeRef = useRef("");
@@ -44,28 +42,6 @@ function Work() {
   }, []);
 
   // ✅ fetch validTill from dash-stats (same as Dashboard)
-  useEffect(() => {
-    const fetchValidity = async () => {
-      try {
-        if (!userId || !token) {
-          setExpiryChecked(true);
-          return;
-        }
-
-        const res = await axios.get(`/auth/${userId}/dash-stats`);
-
-        const vt = res.data?.validTill || null;
-        setValidTill(vt);
-      } catch {
-        // Don't clear localStorage here, just mark checked
-      } finally {
-        setExpiryChecked(true);
-      }
-    };
-
-    fetchValidity();
-  }, [userId, token]);
-
   // ✅ compute expired (valid till end of expiry day)
   useEffect(() => {
     if (!validTill) {
@@ -88,6 +64,22 @@ function Work() {
     try {
       const res = await axios.get(`/snippet/next/${userId}`);
       const data = res.data;
+      const nextValidTill = data?.validTill || null;
+
+      setValidTill(nextValidTill);
+      setExpiryChecked(true);
+
+      if (data.expired) {
+        setIsExpired(true);
+        setIsCompleted(false);
+        setSnippet({ title: "Plan Expired", content: "Your plan has expired." });
+        setSnippetNumber(null);
+        setTotalSnippets(null);
+        setUserText("");
+        prevTextRef.current = "";
+        refreshCaptcha();
+        return;
+      }
 
       if (data.done) {
         setIsCompleted(true);
@@ -107,8 +99,10 @@ function Work() {
       setUserText("");
       prevTextRef.current = "";
       setIsCompleted(false);
+      setIsExpired(false);
       refreshCaptcha();
     } catch (err) {
+      setExpiryChecked(true);
       if (err?.response?.status === 401) {
         return;
       }
@@ -248,6 +242,10 @@ function Work() {
 
   // if expiry not checked yet, show loading (optional)
   if (!expiryChecked) {
+    return <p className="load">Loading...</p>;
+  }
+
+  if (!snippet && !isExpired) {
     return <p className="load">Loading...</p>;
   }
 

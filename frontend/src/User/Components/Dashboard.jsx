@@ -32,17 +32,13 @@ function Dashboard() {
         const userId = localStorage.getItem("userId");
         if (!userId) { setError("No user ID found"); return; }
 
-        // fetch dash stats + user flags in parallel
-        const [statsRes, userRes] = await Promise.all([
-          axios.get(`/auth/${userId}/dash-stats`),
-          axios.get(`/auth/${userId}/user`),
-        ]);
+        const { data } = await axios.get(`/auth/${userId}/dash-stats`);
 
-        setStats(statsRes.data);
-        setSoftwareUsed(!!userRes.data?.softwareUsed);
-        setNotInSequence(!!userRes.data?.notInSequence);
-        setIsComplete(userRes.data?.isComplete === false ? false : true);
-        setIsDeclared(!!(userRes.data?.isDeclared ?? userRes.data?.reportDeclared));
+        setStats(data);
+        setSoftwareUsed(!!data?.softwareUsed);
+        setNotInSequence(!!data?.notInSequence);
+        setIsComplete(data?.isComplete === false ? false : true);
+        setIsDeclared(!!(data?.isDeclared ?? data?.reportDeclared));
       } catch (err) {
         setError("Error fetching dashboard stats: " + err.message);
       }

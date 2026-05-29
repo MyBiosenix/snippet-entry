@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+
 const adminAuthRoutes = require("./routes/adminAuthRoutes");
 const userAuthRoutes = require("./routes/userAuthRoutes");
 const packageRoutes = require("./routes/packageRoutes");
@@ -9,22 +10,38 @@ const env = require("./config/env");
 
 const app = express();
 
-const corsOptions = {
-  origin(origin, callback) {
-    // Allow same-origin and non-browser requests such as health checks/curl.
-    if (!origin) {
-      return callback(null, true);
-    }
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-    if (env.corsAllowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://freelancing-project.com",
+    "https://www.freelancing-project.com",
+  ];
 
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-};
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
 
-app.use(cors(corsOptions));
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
+
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
@@ -40,19 +57,5 @@ app.use("/api/auth", userAuthRoutes);
 app.use("/api/package", packageRoutes);
 app.use("/api/snippet", snippetRoutes);
 app.use("/api/sub-admin", subadminRoutes);
-
-app.use((error, _req, res, next) => {
-  if (!error) {
-    return next();
-  }
-
-  if (error.message?.startsWith("CORS blocked for origin:")) {
-    return res.status(403).json({
-      message: "Origin is not allowed by CORS policy",
-    });
-  }
-
-  return next(error);
-});
 
 module.exports = app;

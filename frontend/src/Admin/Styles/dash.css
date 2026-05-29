@@ -1,46 +1,90 @@
-.mydassh{
-    padding: 10px 20px;
-}
-.mydassh h3{
-    font-size: 30px;
-    margin: 0;
-}
-.boxes{
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr ;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-}
-.box{
-    height: 150px;
-    box-shadow: 2px 2px 10px gray;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 20px;
-    border-radius: 5px;
-    color: black;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+.mydassh {
+  padding: 4rem 4.10rem;
 }
 
-.box:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+.mydassh h3 {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 1.5rem;
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+  
+  color: #021c70;
 }
-.icn{
-    margin: 0;
-    font-size: 50px;
+
+.boxes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 16px;
 }
-.inbox h4,h5{
-    margin: 0;
-    text-align: center;
+
+/* Base styles shared by all cards */
+.box-purple, .box-blue, .box-green, .box-red, .box-amber, .box-teal {
+  border-radius: 12px;
+  padding: 1.5rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  min-height: 100px;
 }
-.inbox h4{
-    font-size: 28px;
+
+/* Icon */
+.icn {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
 }
-.inbox h5{
-    font-size: 25px;
+
+.inbox h5 { font-size: 15px; font-weight: 400; margin-bottom: 4px; }
+.inbox h4 { font-size: 30px; font-weight: 500; line-height: 1; }
+
+/* Purple — Admins */
+.box-purple { background: #EEEDFE; border: 0.5px solid #AFA9EC; }
+.box-purple .icn { color: #3C3489; }
+.box-purple .inbox h5 { color: #534AB7; }
+.box-purple .inbox h4 { color: #3C3489; }
+
+/* Blue — Users */
+.box-blue { background: #E6F1FB; border: 0.5px solid #85B7EB; }
+.box-blue .icn { color: #0C447C; }
+.box-blue .inbox h5 { color: #185FA5; }
+.box-blue .inbox h4 { color: #0C447C; }
+
+/* Green — Active */
+.box-green { background: #EAF3DE; border: 0.5px solid #97C459; }
+.box-green .icn { color: #27500A; }
+.box-green .inbox h5 { color: #3B6D11; }
+.box-green .inbox h4 { color: #27500A; }
+
+/* Red — Deactivated */
+.box-red { background: #FCEBEB; border: 0.5px solid #F09595; }
+.box-red .icn { color: #791F1F; }
+.box-red .inbox h5 { color: #A32D2D; }
+.box-red .inbox h4 { color: #791F1F; }
+
+/* Amber — Expiring */
+.box-amber { background: #FAEEDA; border: 0.5px solid #EF9F27; }
+.box-amber .icn { color: #633806; }
+.box-amber .inbox h5 { color: #854F0B; }
+.box-amber .inbox h4 { color: #633806; }
+
+/* Teal — Targets */
+.box-teal { background: #E1F5EE; border: 0.5px solid #5DCAA5; }
+.box-teal .icn { color: #085041; }
+.box-teal .inbox h5 { color: #0F6E56; }
+.box-teal .inbox h4 { color: #085041; }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .boxes { grid-template-columns: 1fr 1fr; }
+  .box-purple, .box-blue, .box-green,
+  .box-red, .box-amber, .box-teal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0.875rem 1rem;
+  }
+  .inbox h4 { font-size: 24px; }
 }

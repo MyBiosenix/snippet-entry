@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import "../Styles/macomp.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,35 +7,44 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getPackagePageLimit } from "../../utils/packageRules";
 import { API_BASE } from "../../utils/api";
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse, useDebouncedValue } from "../../utils/pagination";
 
 function DraftComp() {
   const navigate = useNavigate();
-
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchTerm);
 
-  const itemsPerPage = 10;
-
-  const fetchDraftUsers = async () => {
+  const fetchDraftUsers = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE}/auth/get-drafts`);
-      setUsers(Array.isArray(res.data) ? res.data : []);
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/auth/get-drafts`, {
+        params: {
+          page: currentPage,
+          limit: 10,
+          search: debouncedSearch,
+        },
+      });
+      const { data, pagination: nextPagination } = unwrapPaginatedResponse(res.data);
+      setUsers(data);
+      setPagination(nextPagination);
     } catch (err) {
       alert(err.response?.data?.message || "Error fetching draft users");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearch]);
 
   useEffect(() => {
     fetchDraftUsers();
-  }, []);
+  }, [fetchDraftUsers]);
 
   const patchUserInState = (id, patch) => {
     setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, ...patch } : u)));
-  };
-
-  const removeUserFromList = (id) => {
-    setUsers((prev) => prev.filter((u) => u._id !== id));
   };
 
   const handleActivate = async (id) => {
@@ -61,7 +70,7 @@ function DraftComp() {
 
     try {
       await axios.delete(`${API_BASE}/auth/${id}/delete`);
-      removeUserFromList(id);
+      fetchDraftUsers();
     } catch (err) {
       alert(err.response?.data?.message || "Server error");
     }
@@ -70,55 +79,19 @@ function DraftComp() {
   const handleRemoveFromDraft = async (id) => {
     try {
       await axios.put(`${API_BASE}/auth/${id}/remove-from-drafts`);
-      removeUserFromList(id);
+      fetchDraftUsers();
     } catch (err) {
       alert(err.response?.data?.message || err.message);
     }
   };
 
-  const normalize = (v) => String(v ?? "").toLowerCase().trim();
-
-  const filteredUsers = useMemo(() => {
-    const term = normalize(searchTerm);
-    if (!term) return users;
-
-    return users.filter((u) => {
-      const name = normalize(u.name);
-      const email = normalize(u.email);
-      const pkg = normalize(u.packages?.name);
-      const admin = normalize(u.admin?.name);
-      const status = u.isActive ? "active" : "inactive";
-      const expiry = u.date ? new Date(u.date).toLocaleDateString().toLowerCase() : "";
-
-      return (
-        name.includes(term) ||
-        email.includes(term) ||
-        pkg.includes(term) ||
-        admin.includes(term) ||
-        status.includes(term) ||
-        expiry.includes(term)
-      );
-    });
-  }, [users, searchTerm]);
-
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
-  };
-
   const exportToExcel = () => {
-    const data = filteredUsers.map((u, i) => ({
-      "Sr No.": i + 1,
+    const data = users.map((u, i) => ({
+      "Sr No.": ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       Name: u.name,
       Admin: u.admin?.name || "No Admin",
       "Package Taken": u.packages?.name || "No Package",
       Email: u.email,
-      Password: u.password,
       Status: u.isActive ? "Active" : "Inactive",
       Draft: "Yes",
       "Expiry Date": u.date ? new Date(u.date).toLocaleDateString() : "-",
@@ -135,8 +108,8 @@ function DraftComp() {
     doc.text("Draft Users List", 14, 15);
 
     const tableColumn = ["Sr No.", "Name", "Admin", "Package", "Email", "Status", "Expiry"];
-    const tableRows = filteredUsers.map((u, i) => [
-      i + 1,
+    const tableRows = users.map((u, i) => [
+      ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       u.name,
       u.admin?.name || "No Admin",
       u.packages?.name || "No Package",
@@ -165,7 +138,7 @@ function DraftComp() {
           <h4>Draft Users List</h4>
 
           <button className="type" onClick={() => navigate("/admin/manage-user")}>
-            ← Back
+            â† Back
           </button>
         </div>
 
@@ -196,7 +169,6 @@ function DraftComp() {
                 <th>Admin</th>
                 <th>Package Taken</th>
                 <th>Email Id</th>
-                <th>Password</th>
                 <th>Status</th>
                 <th>Goal Status</th>
                 <th>Expiry Date</th>
@@ -205,15 +177,20 @@ function DraftComp() {
             </thead>
 
             <tbody>
-              {currentItems.length > 0 ? (
-                currentItems.map((u, index) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="9" style={{ textAlign: "center", color: "gray" }}>
+                    Loading draft users...
+                  </td>
+                </tr>
+              ) : users.length > 0 ? (
+                users.map((u, index) => (
                   <tr key={u._id}>
-                    <td>{indexOfFirstItem + index + 1}</td>
+                    <td>{((pagination?.page || 1) - 1) * (pagination?.limit || 10) + index + 1}</td>
                     <td>{u.name}</td>
                     <td>{u.admin?.name || "No Admin"}</td>
                     <td>{u.packages?.name || "No Package"}</td>
                     <td>{u.email}</td>
-                    <td>{u.password}</td>
 
                     <td>
                       {u.isActive ? (
@@ -276,27 +253,7 @@ function DraftComp() {
           </table>
         </div>
 
-        {filteredUsers.length > 0 && (
-          <div className="pagination-container">
-            <div className="pagination">
-              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>
-                «
-              </button>
-              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
-                ‹
-              </button>
-              <span>
-                Page {currentPage} of {totalPages}
-              </span>
-              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
-                ›
-              </button>
-              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>
-                »
-              </button>
-            </div>
-          </div>
-        )}
+        <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
       </div>
     </div>
   );

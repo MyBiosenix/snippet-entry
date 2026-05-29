@@ -1,50 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import '../Styles/macomp.css';
 import axios from 'axios';
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { API_BASE } from "../../utils/api";
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse, useDebouncedValue } from "../../utils/pagination";
 
 function ActiveComp() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  const getActiveUsers = async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/auth/active-users`);
-      setUsers(res.data);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error Fetching Active Users');
-    }
-  };
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchTerm);
 
   useEffect(() => {
+    const getActiveUsers = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${API_BASE}/auth/active-users`, {
+          params: {
+            page: currentPage,
+            limit: 10,
+            search: debouncedSearch,
+          },
+        });
+        const { data, pagination: nextPagination } = unwrapPaginatedResponse(res.data);
+        setUsers(data);
+        setPagination(nextPagination);
+      } catch (err) {
+        alert(err.response?.data?.message || 'Error Fetching Active Users');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     getActiveUsers();
-  }, []);
-
-  const filteredActiveUsers = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredActiveUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredActiveUsers.length / itemsPerPage);
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
+  }, [currentPage, debouncedSearch]);
 
   const exportToExcel = () => {
-    const data = filteredActiveUsers.map((u, i) => ({
-      "Sr No.": i + 1,
+    const data = users.map((u, i) => ({
+      "Sr No.": ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       "Name": u.name,
       "Email": u.email,
       "Status": "Active",
@@ -61,8 +59,8 @@ function ActiveComp() {
     doc.text("Active Users List", 14, 15);
 
     const tableColumn = ["Sr No.", "Name", "Email", "Status"];
-    const tableRows = filteredActiveUsers.map((u, i) => [
-      i + 1,
+    const tableRows = users.map((u, i) => [
+      ((pagination?.page || 1) - 1) * (pagination?.limit || 10) + i + 1,
       u.name,
       u.email,
       "Active",
@@ -81,16 +79,20 @@ function ActiveComp() {
 
   return (
     <div className='comp'>
-      <h3>Active Users</h3>
+      <h3 className='h3'>Active Users</h3>
       <div className='incomp'>
         <div className='go'>
-          <h4>Active Users List</h4>
+          <h4 className=''>Active Users List</h4>
         </div>
 
         <div className='go'>
           <div className='mygo'>
-            <p onClick={exportToExcel} style={{ cursor: 'pointer' }}>Excel</p>
-            <p onClick={exportToPDF} style={{ cursor: 'pointer' }}>PDF</p>
+            <p onClick={exportToExcel} style={{ cursor: 'pointer' }} className='add-btn'>
+              Excel
+            </p>
+            <p onClick={exportToPDF} style={{ cursor: 'pointer' }} className='add-btn'>
+              PDF
+            </p>
           </div>
           <input
             type='text'
@@ -114,10 +116,16 @@ function ActiveComp() {
             </tr>
           </thead>
           <tbody>
-            {currentItems.length > 0 ? (
-              currentItems.map((u, index) => (
+            {loading ? (
+              <tr>
+                <td colSpan='4' style={{ textAlign: 'center', color: 'gray' }}>
+                  Loading active users...
+                </td>
+              </tr>
+            ) : users.length > 0 ? (
+              users.map((u, index) => (
                 <tr key={u._id}>
-                  <td>{indexOfFirstItem + index + 1}</td>
+                  <td>{((pagination?.page || 1) - 1) * (pagination?.limit || 10) + index + 1}</td>
                   <td>{u.name}</td>
                   <td>{u.email}</td>
                   <td style={{ color: 'green', fontWeight: 'bold' }}>Active</td>
@@ -133,17 +141,7 @@ function ActiveComp() {
           </tbody>
         </table>
 
-        {filteredActiveUsers.length > 0 && (
-          <div className="pagination-container">
-            <div className="pagination">
-              <button onClick={() => goToPage(1)} disabled={currentPage === 1}>«</button>
-              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>‹</button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
-              <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>»</button>
-            </div>
-          </div>
-        )}
+        <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
       </div>
     </div>
   );

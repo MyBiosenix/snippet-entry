@@ -2,6 +2,11 @@ const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const User = require('../models/User');
 const env = require('../config/env');
+const {
+    buildPaginatedResponse,
+    escapeRegex,
+    parsePaginationQuery,
+} = require("../utils/pagination");
 
 exports.login = async(req, res) =>{
     try{
@@ -69,8 +74,44 @@ exports.createAdmin = async(req, res) => {
 
 exports.getAdmin = async(req,res) => {
     try{
-        const admins = await Admin.find().select('-__v');
-        res.status(200).json(admins);
+        const {
+            page,
+            limit,
+            skip,
+            sortBy,
+            sortOrder,
+            search,
+        } = parsePaginationQuery(req.query, {
+            defaultLimit: 10,
+            defaultSortBy: "date",
+            defaultSortOrder: "desc",
+            allowedSortFields: ["name", "email", "role", "date"],
+        });
+
+        const query = {};
+
+        if (search) {
+            const regex = new RegExp(escapeRegex(search), "i");
+            query.$or = [
+                { name: regex },
+                { email: regex },
+                { role: regex },
+            ];
+        }
+
+        const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1, _id: 1 };
+
+        const [admins, total] = await Promise.all([
+            Admin.find(query)
+                .select("name email role date")
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Admin.countDocuments(query),
+        ]);
+
+        res.status(200).json(buildPaginatedResponse(admins, page, limit, total));
     }
     catch(err){
         res.status(500).json({message: err.message});

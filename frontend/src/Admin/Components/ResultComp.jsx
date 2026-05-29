@@ -3,6 +3,8 @@ import { useLocation } from "react-router-dom";
 import "../Styles/result.css";
 import { API_BASE } from "../../utils/api";
 import { getStaffToken } from "../../utils/auth";
+import PaginationControls from "../../components/PaginationControls";
+import { unwrapPaginatedResponse } from "../../utils/pagination";
 
 function ResultComp() {
   const location = useLocation();
@@ -21,6 +23,9 @@ function ResultComp() {
   const [isDeclared, setIsDeclared] = useState(false);
   const [declaredAt, setDeclaredAt] = useState(null);
   const [declaring, setDeclaring] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loadingResults, setLoadingResults] = useState(false);
   const [editValues, setEditValues] = useState({
     capitalSmall: 0,
     punctuation: 0,
@@ -41,6 +46,7 @@ function ResultComp() {
       setUserDetails(routedUser);
       setIsDeclared(Boolean(routedUser.isDeclared));
       setDeclaredAt(routedUser.declaredAt || null);
+      setCurrentPage(1);
     }
   }, [routedUser]);
 
@@ -78,7 +84,14 @@ function ResultComp() {
 
     const fetchResults = async () => {
       try {
-        const res = await fetch(`${snippetBase}/results/${userId}`, {
+        setLoadingResults(true);
+        const params = new URLSearchParams({
+          page: String(currentPage),
+          limit: "20",
+          sortBy: "pageNumber",
+          sortOrder: "asc",
+        });
+        const res = await fetch(`${snippetBase}/results/${userId}?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -87,34 +100,40 @@ function ResultComp() {
           throw new Error(data.message || "Failed to load user results");
         }
 
-        const cleaned = (Array.isArray(data) ? data : []).map((r, index) => {
+        const { data: rows, pagination: nextPagination } = unwrapPaginatedResponse(data);
+        const cleaned = rows.map((r) => {
           const content = (r.snippetId?.content || "")
             .replace(/\n{2,}/g, "\n\n")
             .replace(/([^\n])\n([^\n])/g, "$1 $2");
 
           return {
             ...r,
-            pageNumber: index + 1,
             snippetId: { ...r.snippetId, content },
             userText: (r.userText || "").replace(/\n+/g, "\n"),
           };
         });
 
         setResults(cleaned);
+        setPagination(nextPagination);
         setPageError("");
 
-        if (selected?._id) {
-          const fresh = cleaned.find((item) => item._id === selected._id);
-          if (fresh) setSelected(fresh);
-        }
+        setSelected((prevSelected) => {
+          if (prevSelected?._id) {
+            return cleaned.find((item) => item._id === prevSelected._id) || cleaned[0] || null;
+          }
+
+          return cleaned[0] || null;
+        });
       } catch (err) {
         setResults([]);
         setPageError(err.message || "Failed to load user results.");
+      } finally {
+        setLoadingResults(false);
       }
     };
 
     fetchResults();
-  }, [snippetBase, token, userId, selected?._id]);
+  }, [snippetBase, token, userId, currentPage]);
 
   useEffect(() => {
     const total = results
@@ -507,7 +526,9 @@ function ResultComp() {
           </select>
 
           <div className="sidebar-scroll">
-            {sortedResults.map((r) => {
+            {loadingResults ? (
+              <p className="placeholder">Loading results...</p>
+            ) : sortedResults.map((r) => {
               const err = Number(r.totalErrorPercentage || 0);
               const invalid = isInvalidPage(r);
 
@@ -548,6 +569,8 @@ function ResultComp() {
               );
             })}
           </div>
+
+          <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
 
           <button
             onClick={handleDeclareResult}

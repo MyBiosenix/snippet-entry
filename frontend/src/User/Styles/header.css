@@ -1,187 +1,373 @@
-body{
-    color: black;
-}
-.myheader{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 30px;
-    background-color: rgba(255, 255, 255, 0.8);
-    border-bottom: 1px solid #e5e7eb;
-    z-index: 30;
-    position: relative;
-
-}
-.myheader h3{
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-
-}
-.in1{
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.menu{
-    font-size: 30px;
-    cursor: pointer;
-}
-.in-header{
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    cursor: pointer;
-}
-.usericon{
-    font-size: 40px;
-    cursor: pointer;
-}
-.udet{
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.udet p{
-    margin: 0;
+/* ── Header ── */
+.myheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  height: 60px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
-.sidebar{
-    position: fixed;
-    text-align: center;
-    padding: 0;
-    left: -350px;
-    background-color: #1e293b;
-    height: 100%;
-    width: 15%;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 20px 30px;
-    align-items: flex-start;
-    transition: left 0.3s ease;
-    z-index: 20;
-}
-.sidebar.open{
-    left: 0;
-}
-.sidebar p{
-    border-bottom: 1px solid white;
-    width: 100%;
-}
-.adicon{
-    font-size: 40px;
-    cursor: pointer;
+.in1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.myp{
-    display: flex;
-    align-items: center;
-    font-size: 20px;
-    color: white;
-    gap: 20px;
-    margin: 0;
-    text-align: start;
-    cursor: pointer;
-    background: black;
-    padding: 2px 5px;
+.myheader {
+  height: 68px;
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(16, 33, 58, 0.08);
+  box-shadow: 0 8px 24px rgba(16, 33, 58, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.lop{
-    display: flex;
-    align-items: center;
-    color: white;
-    font-size: 20px;
-    gap: 20px;
-    position: fixed;
-    bottom: 0;
-    text-align: start;
-    cursor: pointer;
+.myheader .in1 {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.dropdown{
-    position: absolute; 
-    top: 80px;          
-    right: 30px;        
-    background-color: white;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 10px;
-    display: none;    
-    z-index: 1000;   
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    transition: top 0.3s ease;
-    
+.myheader .menu {
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border-radius: 12px;
+  color: #10213a;
+  background: #f4f7fb;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
-.dropdown.showDropdown{
-    display: block;      
+
+.myheader .menu:hover {
+  background: #10213a;
+  color: #ffffff;
+  transform: translateY(-1px);
 }
-.dop{
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 17px;
-    border-bottom: 1px solid black;
-    cursor: pointer;
+
+.myheader h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #10213a;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  position: relative;
 }
+
+.myheader h3::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -7px;
+  width: 38px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+}
+
+.in-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid rgba(16, 33, 58, 0.08);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.in-header:hover {
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(16, 33, 58, 0.1);
+  transform: translateY(-1px);
+}
+
+.adicon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, #10213a, #2563eb);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+.udet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.udet p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #10213a;
+}
+
+.udet .role {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 220px;
+  padding: 8px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(16, 33, 58, 0.08);
+  box-shadow: 0 18px 40px rgba(16, 33, 58, 0.14);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px) scale(0.96);
+  transform-origin: top right;
+  transition: all 0.22s ease;
+  z-index: 999;
+}
+
+.dropdown.showDropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.dropdown::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-left: 1px solid rgba(16, 33, 58, 0.08);
+  border-top: 1px solid rgba(16, 33, 58, 0.08);
+  transform: rotate(45deg);
+}
+
+.dop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  transition: all 0.2s ease;
+}
+
+.dop svg {
+  font-size: 17px;
+  color: #2563eb;
+}
+
+.dop:hover {
+  background: #eff6ff;
+  color: #10213a;
+}
+
+.menu {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 20px;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.menu:hover { background: #f1f5f9; }
+
+/* Profile area */
+.in-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.in-header:hover { background: #f1f5f9; }
+
+.adicon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #E6F1FB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0C447C;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.udet { display: flex; flex-direction: column; gap: 1px; }
+.udet p { font-size: 13px; font-weight: 500; color: #1e293b; margin: 0; line-height: 1.3; }
+.udet .role { font-size: 11px; color: #64748b; }
+
+/* Dropdown */
+.dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 180px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+.dropdown.showDropdown { display: block; }
+
+.dop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: none;
+}
+.dop:hover { background: #f1f5f9; }
+.dop svg { font-size: 16px; color: #64748b; }
+
+/* ── Sidebar ── */
+.sidebar {
+  position: fixed;
+  top: 60px;
+  left: -260px;
+  width: 240px;
+  height: calc(100% - 60px);
+  background: #1e293b;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+  z-index: 20;
+  transition: left 0.25s ease;
+  overflow-y: auto;
+}
+.sidebar.open { left: 0; }
+
+/* Sidebar section label */
+.sb-label {
+  font-size: 18px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0.75rem 1.25rem 0.4rem;
+}
+
+/* Nav items — change your <p> tags to <div> for better semantics */
+.myp {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 1.25rem;
+  font-size: 16px;
+  font-weight: 500;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin: 0;
+  border-left: 3px solid transparent;
+}
+.myp:hover { background: rgba(255,255,255,0.07); color: #fff; }
+.myp.active {
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  border-left-color: #2575fc;
+  padding-left: calc(1.25rem - 3px);
+}
+.myp svg { font-size: 17px; width: 20px; flex-shrink: 0; }
+
+/* Logout */
+.lop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 1.25rem;
+  font-size: 16px;
+  font-weight: 500;
+  color: #f87171;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: auto;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 1rem;
+}
+.lop:hover { background: rgba(248,113,113,0.1); }
+.lop svg { font-size: 17px; width: 20px; }
+
+/* Overlay */
 .overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
-    backdrop-filter: blur(4px);
-    background-color: rgba(0, 0, 0, 0.4);
-    z-index: 10; 
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+  z-index: 15;
+}
+/* Section labels inside sidebar */
+.sb-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0.75rem 1.25rem 0.4rem;
 }
 
-@media (max-width: 450px) {
-  .myheader {
-    padding: 10px 25px;
-    position: sticky;
-    top: 0;
-    background-color: #fff;
-  }
+/* adicon is now a div wrapping the react-icon */
+.adicon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #E6F1FB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0C447C;
+  font-size: 18px;
+  flex-shrink: 0;
+}
 
-  .in1 h3 {
-    font-size: 13px;
-    letter-spacing: 0;
-  }
-
-  .in-header {
-    flex-direction: row-reverse;
-    gap: 8px;
-  }
-
-  .usericon {
-    font-size: 28px;
-  }
-
-  .sidebar {
-    width: 40%;
-    left: -100%;
-  }
-
-  .sidebar.open {
-    left: 0;
-  }
-
-  .myp {
-    font-size: 16px;
-  }
-  .lop{
-    font-size: 16px;
-    margin-bottom: 40px;
-  }
-
-  .dropdown {
-    right: 15px;
-    width: 140px;
-  }
-  .dop{
-    font-size: 15px;
-  }
-  .udet{
-    display: none;
-  }
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .myheader { padding: 0 1rem; }
+  .myheader h3 { font-size: 14px; letter-spacing: 1px; }
+  .udet { display: none; }
+  .sidebar { width: 72%; }
+  .adicon { width: 32px; height: 32px; font-size: 16px; }
 }
