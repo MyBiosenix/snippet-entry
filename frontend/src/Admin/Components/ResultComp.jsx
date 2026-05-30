@@ -3,8 +3,6 @@ import { useLocation } from "react-router-dom";
 import "../Styles/result.css";
 import { API_BASE } from "../../utils/api";
 import { getStaffToken } from "../../utils/auth";
-import PaginationControls from "../../components/PaginationControls";
-import { unwrapPaginatedResponse } from "../../utils/pagination";
 
 function ResultComp() {
   const location = useLocation();
@@ -23,9 +21,8 @@ function ResultComp() {
   const [isDeclared, setIsDeclared] = useState(false);
   const [declaredAt, setDeclaredAt] = useState(null);
   const [declaring, setDeclaring] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState(null);
   const [loadingResults, setLoadingResults] = useState(false);
+
   const [editValues, setEditValues] = useState({
     capitalSmall: 0,
     punctuation: 0,
@@ -46,13 +43,14 @@ function ResultComp() {
       setUserDetails(routedUser);
       setIsDeclared(Boolean(routedUser.isDeclared));
       setDeclaredAt(routedUser.declaredAt || null);
-      setCurrentPage(1);
     }
   }, [routedUser]);
 
   useEffect(() => {
     if (!userId || !token) {
-      setPageError("User details not found. Please open the report again from Manage Users.");
+      setPageError(
+        "User details not found. Please open the report again from Manage Users."
+      );
       return;
     }
 
@@ -61,6 +59,7 @@ function ResultComp() {
         const res = await fetch(`${authBase}/admin/${userId}/user`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         const data = await res.json();
 
         if (!res.ok) {
@@ -85,22 +84,36 @@ function ResultComp() {
     const fetchResults = async () => {
       try {
         setLoadingResults(true);
+
         const params = new URLSearchParams({
-          page: String(currentPage),
-          limit: "20",
+          limit: "100000",
           sortBy: "pageNumber",
           sortOrder: "asc",
         });
-        const res = await fetch(`${snippetBase}/results/${userId}?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+
+        const res = await fetch(
+          `${snippetBase}/results/${userId}?${params.toString()}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
         const data = await res.json();
 
         if (!res.ok) {
           throw new Error(data.message || "Failed to load user results");
         }
 
-        const { data: rows, pagination: nextPagination } = unwrapPaginatedResponse(data);
+        const rows = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data?.results)
+          ? data.results
+          : Array.isArray(data?.data?.results)
+          ? data.data.results
+          : [];
+
         const cleaned = rows.map((r) => {
           const content = (r.snippetId?.content || "")
             .replace(/\n{2,}/g, "\n\n")
@@ -114,12 +127,15 @@ function ResultComp() {
         });
 
         setResults(cleaned);
-        setPagination(nextPagination);
         setPageError("");
 
         setSelected((prevSelected) => {
           if (prevSelected?._id) {
-            return cleaned.find((item) => item._id === prevSelected._id) || cleaned[0] || null;
+            return (
+              cleaned.find((item) => item._id === prevSelected._id) ||
+              cleaned[0] ||
+              null
+            );
           }
 
           return cleaned[0] || null;
@@ -133,12 +149,13 @@ function ResultComp() {
     };
 
     fetchResults();
-  }, [snippetBase, token, userId, currentPage]);
+  }, [snippetBase, token, userId]);
 
   useEffect(() => {
     const total = results
       .filter((r) => r.visibleToUser)
       .reduce((sum, r) => sum + Number(r.totalErrorPercentage || 0), 0);
+
     setVisibleTotal(total);
   }, [results]);
 
@@ -148,6 +165,7 @@ function ResultComp() {
     return [...results].sort((a, b) => {
       const aErr = Number(a.totalErrorPercentage || 0);
       const bErr = Number(b.totalErrorPercentage || 0);
+
       return sortOrder === "asc" ? aErr - bErr : bErr - aErr;
     });
   }, [results, sortOrder]);
@@ -160,6 +178,7 @@ function ResultComp() {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -173,7 +192,10 @@ function ResultComp() {
       );
 
       if (selected?._id === errorId) {
-        setSelected((prev) => ({ ...prev, visibleToUser: data.visibleToUser }));
+        setSelected((prev) => ({
+          ...prev,
+          visibleToUser: data.visibleToUser,
+        }));
       }
     } catch (err) {
       alert(err.message || "Failed to toggle visibility");
@@ -196,15 +218,21 @@ function ResultComp() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.message || "Failed to declare result");
       }
 
       setIsDeclared(Boolean(data.isDeclared));
       setDeclaredAt(data.declaredAt || null);
+
       setUserDetails((prev) =>
         prev
-          ? { ...prev, isDeclared: Boolean(data.isDeclared), declaredAt: data.declaredAt || null }
+          ? {
+              ...prev,
+              isDeclared: Boolean(data.isDeclared),
+              declaredAt: data.declaredAt || null,
+            }
           : prev
       );
 
@@ -233,6 +261,7 @@ function ResultComp() {
     setSelected(r);
     setEditMode(true);
     setEditUserTextMode(false);
+
     setEditValues({
       capitalSmall: Number(r.capitalSmall || 0),
       punctuation: Number(r.punctuation || 0),
@@ -257,6 +286,7 @@ function ResultComp() {
 
   const handleCancelEdit = () => {
     setEditMode(false);
+
     if (selected) {
       const fresh = results.find((r) => r._id === selected._id);
       if (fresh) setSelected(fresh);
@@ -267,22 +297,28 @@ function ResultComp() {
     if (!selected) return;
 
     try {
-      const res = await fetch(`${snippetBase}/update/${userId}/${selected._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(editValues),
-      });
+      const res = await fetch(
+        `${snippetBase}/update/${userId}/${selected._id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(editValues),
+        }
+      );
 
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.message || "Failed to save edits");
       }
 
       setResults((prev) =>
-        prev.map((r) => (r._id === selected._id ? { ...r, ...data.updated } : r))
+        prev.map((r) =>
+          r._id === selected._id ? { ...r, ...data.updated } : r
+        )
       );
 
       setSelected((prev) => ({
@@ -300,6 +336,7 @@ function ResultComp() {
 
   const startEditUserText = () => {
     if (!selected) return;
+
     setUserTextDraft(selected.userText || "");
     setEditUserTextMode(true);
     setEditMode(false);
@@ -308,6 +345,7 @@ function ResultComp() {
   const cancelEditUserText = () => {
     setEditUserTextMode(false);
     setUserTextDraft("");
+
     if (selected) {
       const fresh = results.find((r) => r._id === selected._id);
       if (fresh) setSelected(fresh);
@@ -320,22 +358,28 @@ function ResultComp() {
     try {
       setSavingUserText(true);
 
-      const res = await fetch(`${snippetBase}/edit-text/${userId}/${selected._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userText: userTextDraft }),
-      });
+      const res = await fetch(
+        `${snippetBase}/edit-text/${userId}/${selected._id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userText: userTextDraft }),
+        }
+      );
 
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.message || "Failed to update user text");
       }
 
       setResults((prev) =>
-        prev.map((r) => (r._id === selected._id ? { ...r, ...data.updated } : r))
+        prev.map((r) =>
+          r._id === selected._id ? { ...r, ...data.updated } : r
+        )
       );
 
       setSelected((prev) => ({
@@ -368,18 +412,24 @@ function ResultComp() {
     userText = normalize(userText);
 
     const strip = (s) => s.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+
     const oWords = original.split(/\s+/);
     const uWords = userText.split(/\s+/);
     const oNorm = oWords.map(strip);
     const uNorm = uWords.map(strip);
+
     const m = oNorm.length;
     const n = uNorm.length;
+
     const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
 
     for (let i = 1; i <= m; i += 1) {
       for (let j = 1; j <= n; j += 1) {
-        if (oNorm[i - 1] === uNorm[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
-        else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        if (oNorm[i - 1] === uNorm[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
       }
     }
 
@@ -405,6 +455,7 @@ function ResultComp() {
       align.unshift({ ow: oWords[i - 1], uw: null });
       i -= 1;
     }
+
     while (j > 0) {
       align.unshift({ ow: null, uw: uWords[j - 1] });
       j -= 1;
@@ -412,6 +463,7 @@ function ResultComp() {
 
     const stripPunct = (s = "") =>
       typeof s === "string" ? s.replace(/[^\p{L}\p{N}]/gu, "") : "";
+
     const getPunct = (s = "") =>
       typeof s === "string" ? s.replace(/[\p{L}\p{N}]/gu, "") : "";
 
@@ -439,7 +491,11 @@ function ResultComp() {
 
       if (baseOlower === baseUlower && baseOraw !== baseUraw) {
         return (
-          <span key={index} className="error-red" data-tip="Capital/Small mistake">
+          <span
+            key={index}
+            className="error-red"
+            data-tip="Capital/Small mistake"
+          >
             {uw}{" "}
           </span>
         );
@@ -455,7 +511,11 @@ function ResultComp() {
 
       if (getPunct(ow) !== getPunct(uw)) {
         return (
-          <span key={index} className="error-blue" data-tip="Punctuation differs">
+          <span
+            key={index}
+            className="error-blue"
+            data-tip="Punctuation differs"
+          >
             {uw}{" "}
           </span>
         );
@@ -471,15 +531,19 @@ function ResultComp() {
         <p>
           <b>Name:</b> {userDetails?.name || "-"}
         </p>
+
         <p>
           <b>Email:</b> {userDetails?.email || "-"}
         </p>
+
         <p>
           <b>Package:</b> {userDetails?.packages?.name || "-"}
         </p>
+
         <p>
           <b>Mobile:</b> {userDetails?.mobile || "-"}
         </p>
+
         <p style={{ marginTop: 10 }}>
           <b>Result Status:</b>{" "}
           {isDeclared ? (
@@ -488,6 +552,7 @@ function ResultComp() {
             <span style={{ color: "red" }}>Not Declared</span>
           )}
         </p>
+
         {isDeclared && declaredAt ? (
           <p style={{ fontSize: 13, opacity: 0.8 }}>
             <b>Declared At:</b> {new Date(declaredAt).toLocaleString("en-IN")}
@@ -528,49 +593,60 @@ function ResultComp() {
           <div className="sidebar-scroll">
             {loadingResults ? (
               <p className="placeholder">Loading results...</p>
-            ) : sortedResults.map((r) => {
-              const err = Number(r.totalErrorPercentage || 0);
-              const invalid = isInvalidPage(r);
+            ) : (
+              sortedResults.map((r) => {
+                const err = Number(r.totalErrorPercentage || 0);
+                const invalid = isInvalidPage(r);
 
-              return (
-                <div key={r._id} className="snippet-item-wrapper">
-                  <p
-                    className={`snippet-item ${selected?._id === r._id ? "active" : ""} ${
-                      invalid ? "invalid-page" : ""
-                    }`}
-                    onClick={() => handleSnippetClick(r)}
-                  >
-                    Page {r.pageNumber} -{" "}
-                    {invalid ? (
-                      <>
-                        <span className="invalid-badge">INVALID</span>
-                        <span style={{ marginLeft: 8, opacity: 0.85 }}>
-                          ({err.toFixed(2)}%)
-                        </span>
-                      </>
-                    ) : (
-                      <span>{err.toFixed(2)}%</span>
-                    )}
-                  </p>
-
-                  <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
-                    <button
-                      className={`toggle-btn ${r.visibleToUser ? "visible" : "hidden"}`}
-                      onClick={() => handleToggleVisibility(r._id)}
+                return (
+                  <div key={r._id} className="snippet-item-wrapper">
+                    <p
+                      className={`snippet-item ${
+                        selected?._id === r._id ? "active" : ""
+                      } ${invalid ? "invalid-page" : ""}`}
+                      onClick={() => handleSnippetClick(r)}
                     >
-                      {r.visibleToUser ? "Visible" : "Hidden"}
-                    </button>
+                      Page {r.pageNumber} -{" "}
+                      {invalid ? (
+                        <>
+                          <span className="invalid-badge">INVALID</span>
+                          <span style={{ marginLeft: 8, opacity: 0.85 }}>
+                            ({err.toFixed(2)}%)
+                          </span>
+                        </>
+                      ) : (
+                        <span>{err.toFixed(2)}%</span>
+                      )}
+                    </p>
 
-                    <button className="edit-btn" onClick={() => handleEditClick(r)}>
-                      Edit
-                    </button>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginTop: "6px",
+                      }}
+                    >
+                      <button
+                        className={`toggle-btn ${
+                          r.visibleToUser ? "visible" : "hidden"
+                        }`}
+                        onClick={() => handleToggleVisibility(r._id)}
+                      >
+                        {r.visibleToUser ? "Visible" : "Hidden"}
+                      </button>
+
+                      <button
+                        className="edit-btn"
+                        onClick={() => handleEditClick(r)}
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
-
-          <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
 
           <button
             onClick={handleDeclareResult}
@@ -602,6 +678,7 @@ function ResultComp() {
               {editMode ? (
                 <>
                   <h3 className="edit-title">Edit Errors for this Snippet</h3>
+
                   <div className="edit-form">
                     <label>
                       Capital/Small:
@@ -649,7 +726,8 @@ function ResultComp() {
 
                     <p className="edit-total">
                       <b>Total % Error:</b>{" "}
-                      {Number(editValues.totalErrorPercentage || 0).toFixed(2)}%
+                      {Number(editValues.totalErrorPercentage || 0).toFixed(2)}
+                      %
                     </p>
 
                     <div className="edit-actions">
@@ -663,6 +741,7 @@ function ResultComp() {
                   <div className="text-comparison">
                     <div className="text-box original-box">
                       <h4 className="snippet-title">Original</h4>
+
                       <div className="scrollable-text">
                         {selected.snippetId?.content || <i>No text</i>}
                       </div>
@@ -688,7 +767,9 @@ function ResultComp() {
                           <div>
                             <textarea
                               value={userTextDraft}
-                              onChange={(e) => setUserTextDraft(e.target.value)}
+                              onChange={(e) =>
+                                setUserTextDraft(e.target.value)
+                              }
                               style={{
                                 width: "100%",
                                 minHeight: 180,
@@ -698,8 +779,17 @@ function ResultComp() {
                               }}
                             />
 
-                            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                              <button onClick={saveUserText} disabled={savingUserText}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 10,
+                                marginTop: 10,
+                              }}
+                            >
+                              <button
+                                onClick={saveUserText}
+                                disabled={savingUserText}
+                              >
                                 {savingUserText ? "Saving..." : "Save"}
                               </button>
 
@@ -715,7 +805,10 @@ function ResultComp() {
                           Number(selected.punctuation) > 0 ||
                           Number(selected.missingExtraWord) > 0 ||
                           Number(selected.spelling) > 0 ? (
-                          highlightErrors(selected.snippetId?.content, selected.userText)
+                          highlightErrors(
+                            selected.snippetId?.content,
+                            selected.userText
+                          )
                         ) : (
                           <span>{selected.userText}</span>
                         )}
@@ -724,23 +817,28 @@ function ResultComp() {
                   </div>
 
                   <h4 className="error-heading">Errors</h4>
+
                   <ul className="error-list">
                     <li>
                       <span className="color-box color-red"></span>
                       Capital/Small: {selected.capitalSmall}
                     </li>
+
                     <li>
                       <span className="color-box color-blue"></span>
                       Punctuation: {selected.punctuation}
                     </li>
+
                     <li>
                       <span className="color-box color-red"></span>
                       Missing/Extra Word: {selected.missingExtraWord}
                     </li>
+
                     <li>
                       <span className="color-box color-red"></span>
                       Spelling: {selected.spelling}
                     </li>
+
                     <li style={{ marginTop: "10px" }}>
                       <b>Total % Error:</b>{" "}
                       {Number(selected.totalErrorPercentage || 0).toFixed(2)}%
