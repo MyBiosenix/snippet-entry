@@ -47,8 +47,8 @@ function MuComp() {
   const [users, setUsers]                     = useState([]);
   const [searchTerm, setSearchTerm]           = useState("");
   const [currentPage, setCurrentPage]         = useState(1);
-  const [sortField, setSortField]             = useState("date");
-  const [sortOrder, setSortOrder]             = useState("desc");
+  const [sortField, setSortField]             = useState("_id");
+const [sortOrder, setSortOrder]                = useState("asc");
   const [openActionDropdown, setOpenActionDropdown] = useState(null);
   const [pagination, setPagination]           = useState(null);
   const [loading, setLoading]                 = useState(false);
@@ -98,7 +98,7 @@ function MuComp() {
 
   /* ── helpers ── */
   const formatDate = (value) =>
-    value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+    value ? new Date(value).toLocaleDateString("en-IN", {  month: "short",day: "2-digit", year: "numeric" }) : "—";
 
   const getWorkTags = (user) => {
     const tags = [];
@@ -198,6 +198,35 @@ function MuComp() {
   /* ─────────────────────────────────────────────────────────────
      RENDER
   ───────────────────────────────────────────────────────────── */
+  const getPageNumbers = () => {
+  if (!pagination) return [];
+
+  const totalPages =
+    pagination.totalPages || Math.ceil(pagination.total / pagination.limit);
+  const page = pagination.page;
+
+  const pages = [];
+
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    return pages;
+  }
+
+  pages.push(1);
+
+  if (page > 3) pages.push("left-ellipsis");
+
+  const start = Math.max(2, page - 1);
+  const end = Math.min(totalPages - 1, page + 1);
+
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  if (page < totalPages - 2) pages.push("right-ellipsis");
+
+  pages.push(totalPages);
+
+  return pages;
+};
   return (
     <section className="mu-page">
 
@@ -302,17 +331,29 @@ function MuComp() {
         {/* toolbar bottom */}
         <div className="mu-toolbar-bottom">
           {/* sort */}
-          <button
-            className="mu-button mu-button-sort"
-            onClick={() => {
-              setSortField("date");
-              setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
-              setCurrentPage(1);
-            }}
-            title="Sort by expiry date"
-          >
-            Expiry {sortOrder === "asc" ? "↑" : "↓"}
-          </button>
+    <button
+  className="mu-button mu-button-sort"
+  onClick={() => {
+    setSortField("createdAt");
+    setSortOrder("asc");
+    setCurrentPage(1);
+  }}
+  title="Sort by added date"
+>
+  Added Date ↑
+</button>
+
+<button
+  className="mu-button mu-button-sort"
+  onClick={() => {
+    setSortField("date");
+    setSortOrder("desc");
+    setCurrentPage(1);
+  }}
+  title="Sort by expiry date"
+>
+  Expiry ↓
+</button>
 
           {/* filter pills */}
           <div className="mu-filter-pills">
@@ -578,15 +619,54 @@ function MuComp() {
         </div>
 
         {/* pagination */}
-        {pagination && (
-          <div className="mu-pagination-wrap">
-            <span className="mu-pagination-info">
-              Showing {((pagination.page - 1) * pagination.limit) + 1}–
-              {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
-            </span>
-            <PaginationControls pagination={pagination} onPageChange={setCurrentPage} />
-          </div>
-        )}
+       {/* pagination */}
+{pagination && (
+  <div className="mu-pagination-wrap">
+    <span className="mu-pagination-info">
+      Showing {((pagination.page - 1) * pagination.limit) + 1}–
+      {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
+    </span>
+
+    <div className="mu-page-number-wrap">
+      <button
+        className="mu-page-arrow-btn"
+        disabled={pagination.page <= 1}
+        onClick={() => setCurrentPage(pagination.page - 1)}
+      >
+        ‹
+      </button>
+
+      {getPageNumbers().map((pageItem, index) =>
+        typeof pageItem === "string" ? (
+          <span key={pageItem + index} className="mu-page-ellipsis">
+            ...
+          </span>
+        ) : (
+          <button
+            key={pageItem}
+            className={`mu-page-number-btn ${
+              pagination.page === pageItem ? "is-active-page" : ""
+            }`}
+            onClick={() => setCurrentPage(pageItem)}
+          >
+            {pageItem}
+          </button>
+        )
+      )}
+
+      <button
+        className="mu-page-arrow-btn"
+        disabled={
+          pagination.page >=
+          (pagination.totalPages || Math.ceil(pagination.total / pagination.limit))
+        }
+        onClick={() => setCurrentPage(pagination.page + 1)}
+      >
+        ›
+      </button>
+    </div>
+  </div>
+)}
       </div>
     </section>
   );

@@ -78,15 +78,17 @@ function ResultComp() {
     fetchUserDetails();
   }, [authBase, token, userId]);
 
-  useEffect(() => {
-    if (!userId || !token) return;
+ useEffect(() => {
+  if (!userId || !token) return;
 
-    const fetchResults = async () => {
-      try {
-        setLoadingResults(true);
+  const fetchResults = async () => {
+    try {
+      setLoadingResults(true);
 
+      const fetchResultPage = async (page = 1) => {
         const params = new URLSearchParams({
-          limit: "100000",
+          page: String(page),
+          limit: "100",
           sortBy: "pageNumber",
           sortOrder: "asc",
         });
@@ -104,7 +106,13 @@ function ResultComp() {
           throw new Error(data.message || "Failed to load user results");
         }
 
-        const rows = Array.isArray(data)
+        return data;
+      };
+
+      const firstResponse = await fetchResultPage(1);
+
+      const getRows = (data) =>
+        Array.isArray(data)
           ? data
           : Array.isArray(data?.data)
           ? data.data
@@ -114,42 +122,70 @@ function ResultComp() {
           ? data.data.results
           : [];
 
-        const cleaned = rows.map((r) => {
-          const content = (r.snippetId?.content || "")
-            .replace(/\n{2,}/g, "\n\n")
-            .replace(/([^\n])\n([^\n])/g, "$1 $2");
+      const firstRows = getRows(firstResponse);
 
-          return {
-            ...r,
-            snippetId: { ...r.snippetId, content },
-            userText: (r.userText || "").replace(/\n+/g, "\n"),
-          };
+      const pagination =
+        firstResponse?.pagination ||
+        firstResponse?.data?.pagination ||
+        null;
+
+      const totalPages =
+        pagination?.totalPages ||
+        pagination?.pages ||
+        Math.ceil((pagination?.total || firstRows.length) / (pagination?.limit || 100));
+
+      let allRows = [...firstRows];
+
+      if (pagination && totalPages > 1) {
+        const remainingRequests = [];
+
+        for (let page = 2; page <= totalPages; page += 1) {
+          remainingRequests.push(fetchResultPage(page));
+        }
+
+        const remainingResponses = await Promise.all(remainingRequests);
+
+        remainingResponses.forEach((response) => {
+          allRows = [...allRows, ...getRows(response)];
         });
-
-        setResults(cleaned);
-        setPageError("");
-
-        setSelected((prevSelected) => {
-          if (prevSelected?._id) {
-            return (
-              cleaned.find((item) => item._id === prevSelected._id) ||
-              cleaned[0] ||
-              null
-            );
-          }
-
-          return cleaned[0] || null;
-        });
-      } catch (err) {
-        setResults([]);
-        setPageError(err.message || "Failed to load user results.");
-      } finally {
-        setLoadingResults(false);
       }
-    };
 
-    fetchResults();
-  }, [snippetBase, token, userId]);
+      const cleaned = allRows.map((r) => {
+        const content = (r.snippetId?.content || "")
+          .replace(/\n{2,}/g, "\n\n")
+          .replace(/([^\n])\n([^\n])/g, "$1 $2");
+
+        return {
+          ...r,
+          snippetId: { ...r.snippetId, content },
+          userText: (r.userText || "").replace(/\n+/g, "\n"),
+        };
+      });
+
+      setResults(cleaned);
+      setPageError("");
+
+      setSelected((prevSelected) => {
+        if (prevSelected?._id) {
+          return (
+            cleaned.find((item) => item._id === prevSelected._id) ||
+            cleaned[0] ||
+            null
+          );
+        }
+
+        return cleaned[0] || null;
+      });
+    } catch (err) {
+      setResults([]);
+      setPageError(err.message || "Failed to load user results.");
+    } finally {
+      setLoadingResults(false);
+    }
+  };
+
+  fetchResults();
+}, [snippetBase, token, userId]);
 
   useEffect(() => {
     const total = results

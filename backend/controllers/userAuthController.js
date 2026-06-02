@@ -34,24 +34,37 @@ const USER_LIST_SELECT =
 const USER_PROFILE_SELECT =
   "name email mobile price paymentoptions date isActive isDeclared declaredAt isComplete softwareUsed notInSequence admin packages";
 
-function buildUserSort(sortBy = "date", sortOrder = "desc") {
+function buildUserSort(sortBy = "_id", sortOrder = "asc") {
   const direction = sortOrder === "asc" ? 1 : -1;
 
   switch (sortBy) {
+    case "_id":
+    case "createdAt":
+      return { _id: direction };
+
+    case "date":
+      return { date: direction, _id: 1 };
+
     case "name":
       return { name: direction, _id: 1 };
+
     case "email":
       return { email: direction, _id: 1 };
+
     case "admin":
       return { "admin.name": direction, name: 1, _id: 1 };
+
     case "package":
       return { "packages.name": direction, name: 1, _id: 1 };
+
     case "completedPages":
       return { completedPages: direction, _id: 1 };
+
     case "isActive":
       return { isActive: direction, name: 1, _id: 1 };
+
     default:
-      return { date: direction, _id: 1 };
+      return { _id: 1 };
   }
 }
 
@@ -65,9 +78,19 @@ async function getPaginatedUsers(req, res, options = {}) {
     search,
   } = parsePaginationQuery(req.query, {
     defaultLimit: 10,
-    defaultSortBy: "date",
-    defaultSortOrder: "desc",
-    allowedSortFields: ["date", "name", "email", "admin", "package", "completedPages", "isActive"],
+  defaultSortBy: "_id",
+defaultSortOrder: "asc",
+allowedSortFields: [
+  "_id",
+  "createdAt",
+  "date",
+  "name",
+  "email",
+  "admin",
+  "package",
+  "completedPages",
+  "isActive",
+],
   });
 
   const baseMatch = {};

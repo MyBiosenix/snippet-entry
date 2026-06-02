@@ -469,3 +469,48 @@
 @media (max-width: 400px) {
   .mu-stats-grid { grid-template-columns: 1fr; }
 }
+
+.mu-page-number-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mu-page-number-btn,
+.mu-page-arrow-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #dbe4f0;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.mu-page-number-btn:hover,
+.mu-page-arrow-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.mu-page-number-btn.is-active-page {
+  background: #2575fc;
+  color: #ffffff;
+  border-color: #2575fc;
+}
+
+.mu-page-arrow-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mu-page-ellipsis {
+  padding: 0 4px;
+  color: #64748b;
+  font-weight: 700;
+}

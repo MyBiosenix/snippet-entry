@@ -29,7 +29,7 @@ function AUComp() {
   const [priceError, setPriceError] = useState("");
 
   // ✅ expiry date + time inputs
-  const [date, setDate] = useState(""); // YYYY-MM-DD
+  const [date, setDate] = useState(""); // MM-DD-YYYY
   const [time, setTime] = useState("23:59"); // HH:mm
 
   const getAdminNames = async () => {
@@ -57,13 +57,30 @@ function AUComp() {
     getPackageNames();
   }, []);
 
-  // ✅ helper: combine date+time -> ISO string for backend
+  // ✅ helper: combine MM-DD-YYYY + time -> ISO string for backend
   const buildExpiryISO = (dateStr, timeStr) => {
     if (!dateStr || !timeStr) return "";
-    const [yyyy, mm, dd] = dateStr.split("-").map(Number);
+
+    const dateRegex = /^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])-\d{4}$/;
+
+    if (!dateRegex.test(dateStr)) {
+      return "";
+    }
+
+    const [mm, dd, yyyy] = dateStr.split("-").map(Number);
     const [hh, min] = timeStr.split(":").map(Number);
 
     const dt = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
+
+    // ✅ validate real date like 02-30-2026 should not pass
+    if (
+      dt.getFullYear() !== yyyy ||
+      dt.getMonth() !== mm - 1 ||
+      dt.getDate() !== dd
+    ) {
+      return "";
+    }
+
     return dt.toISOString();
   };
 
@@ -99,7 +116,9 @@ function AUComp() {
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
-      setDate(`${yyyy}-${mm}-${dd}`);
+
+      // ✅ show date in MM-DD-YYYY format
+      setDate(`${mm}-${dd}-${yyyy}`);
 
       const hh = String(d.getHours()).padStart(2, "0");
       const min = String(d.getMinutes()).padStart(2, "0");
@@ -176,7 +195,7 @@ function AUComp() {
 
     const expiryISO = buildExpiryISO(date, time);
     if (!expiryISO) {
-      alert("Please select expiry date and time");
+      alert("Please enter expiry date in MM-DD-YYYY format");
       valid = false;
     }
 
@@ -281,7 +300,13 @@ function AUComp() {
 
           {/* ✅ Expiry Date + Time */}
           <div style={{ display: "flex", gap: 10 }}>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <input
+              type="text"
+              value={date}
+              placeholder="MM-DD-YYYY"
+              maxLength={10}
+              onChange={(e) => setDate(e.target.value)}
+            />
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </div>
         </div>
