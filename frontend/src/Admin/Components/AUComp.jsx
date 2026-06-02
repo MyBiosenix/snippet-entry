@@ -58,17 +58,32 @@ function AUComp() {
   }, []);
 
   // ✅ helper: combine MM-DD-YYYY + time -> ISO string for backend
-  const buildExpiryISO = (dateStr, timeStr) => {
-    if (!dateStr || !timeStr) return "";
+ const buildExpiryISO = (dateStr, timeStr) => {
+  if (!dateStr || !timeStr) return "";
 
-    const dateRegex = /^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])-\d{4}$/;
+  const [hh, min] = timeStr.split(":").map(Number);
 
-    if (!dateRegex.test(dateStr)) {
-      return "";
-    }
+  let normalizedDate = dateStr.trim();
 
-    const [mm, dd, yyyy] = dateStr.split("-").map(Number);
-    const [hh, min] = timeStr.split(":").map(Number);
+  // ✅ Accept numeric date like 352026 => 03-05-2026
+  // Format meaning: M D YYYY OR MM DD YYYY
+  // Example: 352026 = 3 month, 5 date, 2026 year
+  const onlyNumbers = normalizedDate.replace(/\D/g, "");
+
+  if (/^\d{6}$/.test(onlyNumbers)) {
+    const mm = onlyNumbers.slice(0, 1).padStart(2, "0");
+    const dd = onlyNumbers.slice(1, 2).padStart(2, "0");
+    const yyyy = onlyNumbers.slice(2);
+
+    normalizedDate = `${mm}-${dd}-${yyyy}`;
+  }
+
+  // Supports MM-DD-YYYY
+  const mmDdYyyyRegex =
+    /^(0?[1-9]|1[0-2])-(0?[1-9]|[12][0-9]|3[01])-\d{4}$/;
+
+  if (mmDdYyyyRegex.test(normalizedDate)) {
+    const [mm, dd, yyyy] = normalizedDate.split("-").map(Number);
 
     const dt = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
 
@@ -82,7 +97,19 @@ function AUComp() {
     }
 
     return dt.toISOString();
-  };
+  }
+
+  // Supports other valid browser-readable date formats
+  const dt = new Date(normalizedDate);
+
+  if (isNaN(dt.getTime())) {
+    return "";
+  }
+
+  dt.setHours(hh, min, 0, 0);
+
+  return dt.toISOString();
+};
 
   // ✅ safest way to read price from your package object
   const getPackagePrice = (pkg) => {

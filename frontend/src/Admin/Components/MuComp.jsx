@@ -347,12 +347,12 @@ const [sortOrder, setSortOrder]                = useState("asc");
   className="mu-button mu-button-sort"
   onClick={() => {
     setSortField("date");
-    setSortOrder("desc");
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     setCurrentPage(1);
   }}
   title="Sort by expiry date"
 >
-  Expiry ↓
+  Expiry {sortField === "date" ? (sortOrder === "asc" ? "↑" : "↓") : "↕"}
 </button>
 
           {/* filter pills */}
