@@ -238,47 +238,53 @@ function ResultComp() {
     }
   };
 
-  const handleDeclareResult = async () => {
-    if (!userId) return;
+ const handleDeclareResult = async (declaredStatus) => {
+  if (!userId) return;
 
-    try {
-      setDeclaring(true);
+  const confirmMessage = declaredStatus
+    ? "Are you sure you want to declare this result?"
+    : "Are you sure you want to undeclare this result?";
 
-      const res = await fetch(`${authBase}/declare-result/${userId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ declared: true }),
-      });
+  if (!window.confirm(confirmMessage)) return;
 
-      const data = await res.json();
+  try {
+    setDeclaring(true);
 
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to declare result");
-      }
+    const res = await fetch(`${authBase}/declare-result/${userId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ declared: declaredStatus }),
+    });
 
-      setIsDeclared(Boolean(data.isDeclared));
-      setDeclaredAt(data.declaredAt || null);
+    const data = await res.json();
 
-      setUserDetails((prev) =>
-        prev
-          ? {
-              ...prev,
-              isDeclared: Boolean(data.isDeclared),
-              declaredAt: data.declaredAt || null,
-            }
-          : prev
-      );
-
-      alert("Result declared to user");
-    } catch (err) {
-      alert(err.message || "Failed to declare result");
-    } finally {
-      setDeclaring(false);
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to update result status");
     }
-  };
+
+    setIsDeclared(Boolean(data.isDeclared));
+    setDeclaredAt(data.declaredAt || null);
+
+    setUserDetails((prev) =>
+      prev
+        ? {
+            ...prev,
+            isDeclared: Boolean(data.isDeclared),
+            declaredAt: data.declaredAt || null,
+          }
+        : prev
+    );
+
+    alert(declaredStatus ? "Result declared to user" : "Result undeclared from user");
+  } catch (err) {
+    alert(err.message || "Failed to update result status");
+  } finally {
+    setDeclaring(false);
+  }
+};
 
   const handleSnippetClick = (r) => {
     if (selected?._id === r._id) {
@@ -684,28 +690,49 @@ function ResultComp() {
             )}
           </div>
 
-          <button
-            onClick={handleDeclareResult}
-            disabled={declaring || isDeclared}
-            style={{
-              marginTop: 12,
-              width: "100%",
-              padding: "10px",
-              borderRadius: 8,
-              border: "none",
-              background: isDeclared ? "#2ecc71" : "#0b5ed7",
-              color: "#fff",
-              cursor: declaring || isDeclared ? "not-allowed" : "pointer",
-              opacity: declaring || isDeclared ? 0.8 : 1,
-              fontWeight: 700,
-            }}
-          >
-            {isDeclared
-              ? "Result Already Declared"
-              : declaring
-              ? "Declaring..."
-              : "Declare Result"}
-          </button>
+            <div
+  style={{
+    display: "flex",
+    gap: "10px",
+    marginTop: 12,
+  }}
+>
+  <button
+    onClick={() => handleDeclareResult(true)}
+    disabled={declaring || isDeclared}
+    style={{
+      flex: 1,
+      padding: "10px",
+      borderRadius: 8,
+      border: "none",
+      background: "#0b5ed7",
+      color: "#fff",
+      cursor: declaring || isDeclared ? "not-allowed" : "pointer",
+      opacity: declaring || isDeclared ? 0.6 : 1,
+      fontWeight: 700,
+    }}
+  >
+    {declaring && !isDeclared ? "Declaring..." : "Declare"}
+  </button>
+
+  <button
+    onClick={() => handleDeclareResult(false)}
+    disabled={declaring || !isDeclared}
+    style={{
+      flex: 1,
+      padding: "10px",
+      borderRadius: 8,
+      border: "none",
+      background: "#dc3545",
+      color: "#fff",
+      cursor: declaring || !isDeclared ? "not-allowed" : "pointer",
+      opacity: declaring || !isDeclared ? 0.6 : 1,
+      fontWeight: 700,
+    }}
+  >
+    {declaring && isDeclared ? "Undeclaring..." : "Undeclare"}
+  </button>
+</div>
         </div>
 
         <div className="result-details">

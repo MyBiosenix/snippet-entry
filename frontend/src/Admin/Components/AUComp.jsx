@@ -29,7 +29,7 @@ function AUComp() {
   const [priceError, setPriceError] = useState("");
 
   // ✅ expiry date + time inputs
-  const [date, setDate] = useState(""); // MM-DD-YYYY
+  const [date, setDate] = useState(""); // DD-MM-YYYY
   const [time, setTime] = useState("23:59"); // HH:mm
 
   const getAdminNames = async () => {
@@ -58,58 +58,17 @@ function AUComp() {
   }, []);
 
   // ✅ helper: combine MM-DD-YYYY + time -> ISO string for backend
- const buildExpiryISO = (dateStr, timeStr) => {
-  if (!dateStr || !timeStr) return "";
+  // ✅ combine date + time -> ISO string for backend
+  const buildExpiryISO = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return "";
 
-  const [hh, min] = timeStr.split(":").map(Number);
+    const [yyyy, mm, dd] = dateStr.split("-").map(Number);
+    const [hh, min] = timeStr.split(":").map(Number);
 
-  let normalizedDate = dateStr.trim();
-
-  // ✅ Accept numeric date like 352026 => 03-05-2026
-  // Format meaning: M D YYYY OR MM DD YYYY
-  // Example: 352026 = 3 month, 5 date, 2026 year
-  const onlyNumbers = normalizedDate.replace(/\D/g, "");
-
-  if (/^\d{6}$/.test(onlyNumbers)) {
-    const mm = onlyNumbers.slice(0, 1).padStart(2, "0");
-    const dd = onlyNumbers.slice(1, 2).padStart(2, "0");
-    const yyyy = onlyNumbers.slice(2);
-
-    normalizedDate = `${mm}-${dd}-${yyyy}`;
-  }
-
-  // Supports MM-DD-YYYY
-  const mmDdYyyyRegex =
-    /^(0?[1-9]|1[0-2])-(0?[1-9]|[12][0-9]|3[01])-\d{4}$/;
-
-  if (mmDdYyyyRegex.test(normalizedDate)) {
-    const [mm, dd, yyyy] = normalizedDate.split("-").map(Number);
-
-    const dt = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
-
-    // ✅ validate real date like 02-30-2026 should not pass
-    if (
-      dt.getFullYear() !== yyyy ||
-      dt.getMonth() !== mm - 1 ||
-      dt.getDate() !== dd
-    ) {
-      return "";
-    }
-
-    return dt.toISOString();
-  }
-
-  // Supports other valid browser-readable date formats
-  const dt = new Date(normalizedDate);
-
-  if (isNaN(dt.getTime())) {
-    return "";
-  }
-
-  dt.setHours(hh, min, 0, 0);
-
-  return dt.toISOString();
-};
+    // local datetime -> ISO
+    const expiryAt = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
+    return expiryAt.toISOString();
+  };
 
   // ✅ safest way to read price from your package object
   const getPackagePrice = (pkg) => {
@@ -222,7 +181,8 @@ function AUComp() {
 
     const expiryISO = buildExpiryISO(date, time);
     if (!expiryISO) {
-      alert("Please enter expiry date in MM-DD-YYYY format");
+      // alert("Please enter expiry date in MM-DD-YYYY format");
+      alert("Please enter a valid expiry date");
       valid = false;
     }
 
@@ -326,16 +286,21 @@ function AUComp() {
           </select>
 
           {/* ✅ Expiry Date + Time */}
-          <div style={{ display: "flex", gap: 10 }}>
-            <input
-              type="text"
-              value={date}
-              placeholder="MM-DD-YYYY"
-              maxLength={10}
-              onChange={(e) => setDate(e.target.value)}
-            />
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-          </div>
+     
+<div style={{ display: "flex", gap: 10 }}>
+  <input
+    type="date"
+    value={date}
+    onChange={(e) => setDate(e.target.value)}
+  />
+
+  <input
+    type="time"
+    value={time}
+    onChange={(e) => setTime(e.target.value)}
+  />
+</div>
+       
         </div>
 
         <div className="bttns">
