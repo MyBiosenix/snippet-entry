@@ -59,6 +59,9 @@ function ReportComp() {
   const [softwareUsed, setSoftwareUsed] = useState(false);   // ✅ NEW
   const [notInSequence, setNotInSequence] = useState(false); // ✅ NEW
 
+const [downloadResults, setDownloadResults] = useState([]);
+const [loadingDownloadPreview, setLoadingDownloadPreview] = useState(false);
+
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
 
@@ -196,9 +199,29 @@ function ReportComp() {
     });
   }
 
-  const handleConfirmDownload = async () => {
-    if (!results || results.length === 0) return;
+  const handleOpenDownloadModal = async () => {
+  if (!userId) return;
+
+  setShowModal(true);
+  setLoadingDownloadPreview(true);
+
+  try {
     const allResults = await fetchAllVisibleResults();
+    setDownloadResults(allResults);
+  } catch (err) {
+    console.error("Download preview fetch error:", err);
+    setDownloadResults([]);
+  } finally {
+    setLoadingDownloadPreview(false);
+  }
+};
+
+  const handleConfirmDownload = async () => {
+    let allResults = downloadResults;
+
+if (!allResults || allResults.length === 0) {
+    allResults = await fetchAllVisibleResults();
+  }
     if (!allResults.length) return;
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Typing Report");
@@ -332,9 +355,9 @@ function ReportComp() {
               Page {r.pageNumber}
             </button>
           ))}
-          <button className="download-btn" onClick={() => setShowModal(true)}>
-            Download Report
-          </button>
+          <button className="download-btn" onClick={handleOpenDownloadModal}>
+  Download Report
+</button>
         </div>
       )}
 
@@ -391,24 +414,51 @@ function ReportComp() {
             </tr>
           </thead>
           <tbody>
-            {results.map((r) => (
-              <tr key={r._id}>
-                <td>Page {r.pageNumber}</td>
-                <td>{r.capitalSmall}</td>
-                <td>{r.punctuation}</td>
-                <td>{r.missingExtraWord}</td>
-                <td>{r.spelling}</td>
-                <td>{Number(r.totalErrorPercentage || 0).toFixed(2)}</td>
-              </tr>
-            ))}
-            <tr>
-              <td colSpan="5"><b>TOTAL % ERROR</b></td>
-              <td><b>{results.reduce((sum,r) => sum + Number(r.totalErrorPercentage||0), 0).toFixed(2)}</b></td>
-            </tr>
-          </tbody>
+  {loadingDownloadPreview ? (
+    <tr>
+      <td colSpan="6" style={{ textAlign: "center", padding: "15px" }}>
+        Loading full report...
+      </td>
+    </tr>
+  ) : downloadResults.length > 0 ? (
+    <>
+      {downloadResults.map((r) => (
+        <tr key={r._id}>
+          <td>Page {r.pageNumber}</td>
+          <td>{r.capitalSmall}</td>
+          <td>{r.punctuation}</td>
+          <td>{r.missingExtraWord}</td>
+          <td>{r.spelling}</td>
+          <td>{Number(r.totalErrorPercentage || 0).toFixed(2)}</td>
+        </tr>
+      ))}
+
+      <tr>
+        <td colSpan="5">
+          <b>TOTAL % ERROR</b>
+        </td>
+        <td>
+          <b>
+            {downloadResults
+              .reduce((sum, r) => sum + Number(r.totalErrorPercentage || 0), 0)
+              .toFixed(2)}
+          </b>
+        </td>
+      </tr>
+    </>
+  ) : (
+    <tr>
+      <td colSpan="6" style={{ textAlign: "center", padding: "15px" }}>
+        No report data found.
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
         <div className="modal-buttons">
-          <button onClick={handleConfirmDownload}>Download Excel</button>
+          <button onClick={handleConfirmDownload} disabled={loadingDownloadPreview}>
+        {loadingDownloadPreview ? "Loading..." : "Download Excel"}
+      </button>
           <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
       </Modal>
