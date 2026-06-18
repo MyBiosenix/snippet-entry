@@ -17,12 +17,27 @@ const UserSchema = new mongoose.Schema({
         default: false,
         index: true,
   },
+  isDeleted: {
+  type: Boolean,
+  default: false,
+  index: true,
+},
+
+deletedAt: {
+  type: Date,
+  default: null,
+  index: true,
+},
 
   myerrors: [
     {
       snippetId: { type: mongoose.Schema.Types.ObjectId, ref: "Snippets" },
       userText: { type: String },
 
+      submittedAt: {
+      type: Date,
+      default: Date.now,
+    },
       capitalSmall: { type: Number, default: 0 },
       punctuation: { type: Number, default: 0 },
       missingExtraWord: { type: Number, default: 0 },
@@ -71,5 +86,15 @@ UserSchema.index({ isActive: 1, date: 1 });
 UserSchema.index({ admin: 1, isActive: 1 });
 UserSchema.index({ admin: 1, date: 1 });
 UserSchema.index({ packages: 1 });
+UserSchema.index(
+  { deletedAt: 1 },
+  {
+    expireAfterSeconds: 60 * 24 * 60 * 60,
+    partialFilterExpression: {
+      isDeleted: true,
+      deletedAt: { $type: "date" },
+    },
+  }
+);
 
 module.exports = mongoose.model("User", UserSchema);

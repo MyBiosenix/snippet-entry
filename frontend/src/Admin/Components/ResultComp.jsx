@@ -566,7 +566,23 @@ function ResultComp() {
       return <span key={index}>{uw} </span>;
     });
   }
+const formatSubmitDateTime = (value) => {
+  if (!value) return "-";
 
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
   return (
     <div className="result-page">
       <div className="user-info">
@@ -642,24 +658,30 @@ function ResultComp() {
 
                 return (
                   <div key={r._id} className="snippet-item-wrapper">
-                    <p
-                      className={`snippet-item ${
-                        selected?._id === r._id ? "active" : ""
-                      } ${invalid ? "invalid-page" : ""}`}
-                      onClick={() => handleSnippetClick(r)}
-                    >
-                      Page {r.pageNumber} -{" "}
-                      {invalid ? (
-                        <>
-                          <span className="invalid-badge">INVALID</span>
-                          <span style={{ marginLeft: 8, opacity: 0.85 }}>
-                            ({err.toFixed(2)}%)
-                          </span>
-                        </>
-                      ) : (
-                        <span>{err.toFixed(2)}%</span>
-                      )}
-                    </p>
+                    <div
+  className={`snippet-item ${
+    selected?._id === r._id ? "active" : ""
+  } ${invalid ? "invalid-page" : ""}`}
+  onClick={() => handleSnippetClick(r)}
+>
+  <div>
+    Page {r.pageNumber} -{" "}
+    {invalid ? (
+      <>
+        <span className="invalid-badge">INVALID</span>
+        <span style={{ marginLeft: 8, opacity: 0.85 }}>
+          ({err.toFixed(2)}%)
+        </span>
+      </>
+    ) : (
+      <span>{err.toFixed(2)}%</span>
+    )}
+  </div>
+
+  {/* <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
+    Submitted: {formatSubmitDateTime(r.submittedAt || r.createdAt)}
+  </div> */}
+</div>
 
                     <div
                       style={{
@@ -811,19 +833,25 @@ function ResultComp() {
                     </div>
 
                     <div className="text-box user-box">
-                      <h4
-                        className="snippet-title"
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 10,
-                        }}
-                      >
-                        User Text
-                        <button className="edit-btn" onClick={startEditUserText}>
-                          Edit User Text
-                        </button>
-                      </h4>
+                     <h4
+  className="snippet-title"
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  }}
+>
+  <span>User Text</span>
+
+  <span style={{ fontSize: 12, opacity: 0.8 }}>
+    Submitted: {formatSubmitDateTime(selected.submittedAt || selected.createdAt)}
+  </span>
+
+  <button className="edit-btn" onClick={startEditUserText}>
+    Edit User Text
+  </button>
+</h4>
 
                       <div className="scrollable-text">
                         {editUserTextMode ? (

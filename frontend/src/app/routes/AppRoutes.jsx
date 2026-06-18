@@ -36,6 +36,7 @@ import SIAU from "../../SubAdmin/Pages/SIAU";
 import ProtectedRoute from "../../User/utils/ProtectedRoute";
 import AdminProtectedRoute from "../../Admin/utils/AdminProtectedRoute";
 import SubAdminProtectedRoute from "../../SubAdmin/utils/SubAdminProtectedRoute";
+import TrashUsers from "../../Admin/Pages/TrashUsers";
 
 function AppRoutes() {
   return (
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/report" element={<Report />} />
       <Route path="/view" element={<View />} />
+      
 
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route
@@ -178,7 +180,16 @@ function AppRoutes() {
         }
       />
 
-      <Route path="/sub-admin/login" element={<SLogin />} />
+        <Route
+    path="/admin/trash-users"
+    element={
+      <AdminProtectedRoute>
+        <TrashUsers />
+      </AdminProtectedRoute>
+    }
+  />
+
+  <Route path="/sub-admin/login" element={<SLogin />} />
       <Route
         path="/sub-admin/home"
         element={

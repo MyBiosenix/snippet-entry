@@ -224,13 +224,18 @@ function Work() {
     );
     if (!confirmSubmit) return;
 
-    try {
-      await axios.post("/snippet/submit", { userId, snippetId: snippet._id, userText });
+  try {
+  await axios.post("/snippet/submit", {
+    userId,
+    snippetId: snippet._id,
+    userText,
+    submittedAt: new Date().toISOString(),
+  });
 
-      fetchNextSnippet();
-    } catch (err) {
-      alert(err?.response?.data?.message || "Failed to submit work.");
-    }
+  fetchNextSnippet();
+} catch (err) {
+  alert(err?.response?.data?.message || "Failed to submit work.");
+}
   };
 
   const captchaOk = useMemo(() => {

@@ -29,9 +29,9 @@ function withCompletedPages(user) {
 }
 
 const USER_LIST_SELECT =
-  "name email mobile paymentoptions price isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence";
+  "name email mobile paymentoptions price isActive isDraft date currentIndex admin packages isComplete isDeclared declaredAt softwareUsed notInSequence isDeleted deletedAt";
 
-const USER_PROFILE_SELECT =
+  const USER_PROFILE_SELECT =
   "name email mobile price paymentoptions date isActive isDeclared declaredAt isComplete softwareUsed notInSequence admin packages";
 
 function buildUserSort(sortBy = "_id", sortOrder = "asc") {
@@ -93,7 +93,9 @@ allowedSortFields: [
 ],
   });
 
-  const baseMatch = {};
+  const baseMatch = {
+  isDeleted: { $ne: true },
+};
 
   if (typeof options.isActive === "boolean") {
     baseMatch.isActive = options.isActive;
@@ -435,16 +437,42 @@ exports.getInActiveUsers = async(req,res) => {
     }
 }
 
-exports.deleteUser = async(req,res) => {
-    try{
-        const {id} = req.params;
-        await User.findByIdAndDelete(id);
-        res.status(200).json({ message: 'User Deleted Succesfully'});
+// exports.deleteUser = async(req,res) => {
+//     try{
+//         const {id} = req.params;
+//         await User.findByIdAndDelete(id);
+//         res.status(200).json({ message: 'User Deleted Succesfully'});
+//     }
+//     catch(err){
+//         res.status(400).json(err.message);
+//     }
+// }
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        isActive: false,
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-    catch(err){
-        res.status(400).json(err.message);
-    }
-}
+
+    res.json({
+      message: "User moved to trash successfully",
+      user,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Server error" });
+  }
+};
 
 exports.editUser = async (req, res) => {
   try {
@@ -803,3 +831,72 @@ exports.declareResult = async(req,res) => {
     res.status(500).json({ message: "Server error" });
   }
 }
+exports.getTrashUsers = async (req, res) => {
+  try {
+    const users = await User.find({ isDeleted: true })
+      .populate("admin", "name email")
+      .populate("packages", "name pages")
+      .sort({ deletedAt: -1 })
+      .lean();
+
+    return res.status(200).json(users);
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Failed to fetch trash users",
+    });
+  }
+};
+
+exports.restoreUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      {
+        isDeleted: false,
+        deletedAt: null,
+        isActive: true,
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "User restored successfully",
+      user,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Failed to restore user",
+    });
+  }
+};
+
+exports.permanentDeleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOneAndDelete({
+      _id: id,
+      isDeleted: true,
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Trash user not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "User permanently deleted",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Failed to permanently delete user",
+    });
+  }
+};

@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,getUserForAdmin,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts,declareResult,markUserComplete,markUserIncomplete,markSoftwareUsed,
+const { createUser,getUsers,login,logout,activateUser,deactivateUser,deleteUser, getActiveUsers,getInActiveUsers, editUser,changePassword,getUser,getUserForAdmin,fetchStats,getExpiringSoonUsers, targetsAchieved,addToDrafts,getDrafts,removeDrafts,declareResult,markUserComplete,markUserIncomplete,markSoftwareUsed, getTrashUsers,
+  restoreUser,
+  permanentDeleteUser,
   unmarkSoftwareUsed,
   markNotInSequence,
   unmarkNotInSequence,} = require('../controllers/userAuthController');
@@ -15,6 +17,9 @@ router.post('/create-user',protectAdmin,createUser);
 router.post('/login',login);
 router.post('/logout',authMiddleware,logout)
 router.get('/all-users',protectAdmin,getUsers);
+router.get("/trash-users", protectAdmin, getTrashUsers);
+router.put("/:id/restore", protectAdmin, restoreUser);
+router.delete("/:id/permanent-delete", protectAdmin, permanentDeleteUser);
 router.put('/:id/activate',protectAdmin,activateUser);
 router.put('/:id/deactivate',protectAdmin,deactivateUser);
 router.get('/active-users',protectAdmin,getActiveUsers);

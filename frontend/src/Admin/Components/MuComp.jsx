@@ -254,6 +254,12 @@ const [sortOrder, setSortOrder]                = useState("asc");
           >
             Drafts
           </button>
+    <button
+    className="mu-button mu-button-ghost"
+    onClick={() => navigate("/admin/trash-users")}
+  >
+    🗑 Trash
+  </button>
         </div>
       </div>
 
@@ -504,6 +510,7 @@ const [sortOrder, setSortOrder]                = useState("asc");
                               >
                                 🗑
                               </button>
+       
                             </>
                           )}
 

@@ -145,25 +145,50 @@ async function getPaginatedUserResults(req, res, options = {}) {
     { $skip: skip },
     { $limit: limit },
     {
+      // $project: {
+      //   _id: "$myerrors._id",
+      //   snippetId: {
+      //     _id: "$snippetData._id",
+      //     title: "$snippetData.title",
+      //     content: "$snippetData.content",
+      //   },
+      //   userText: "$myerrors.userText",
+      //   capitalSmall: "$myerrors.capitalSmall",
+      //   punctuation: "$myerrors.punctuation",
+      //   missingExtraWord: "$myerrors.missingExtraWord",
+      //   spelling: "$myerrors.spelling",
+      //   totalErrorPercentage: "$myerrors.totalErrorPercentage",
+      //   displayTokens: "$myerrors.displayTokens",
+      //   createdAt: "$myerrors.createdAt",
+      //   editedAt: "$myerrors.editedAt",
+      //   visibleToUser: "$myerrors.visibleToUser",
+      //   pageNumber: "$myerrors.pageNumber",
+      // },
       $project: {
-        _id: "$myerrors._id",
-        snippetId: {
-          _id: "$snippetData._id",
-          title: "$snippetData.title",
-          content: "$snippetData.content",
-        },
-        userText: "$myerrors.userText",
-        capitalSmall: "$myerrors.capitalSmall",
-        punctuation: "$myerrors.punctuation",
-        missingExtraWord: "$myerrors.missingExtraWord",
-        spelling: "$myerrors.spelling",
-        totalErrorPercentage: "$myerrors.totalErrorPercentage",
-        displayTokens: "$myerrors.displayTokens",
-        createdAt: "$myerrors.createdAt",
-        editedAt: "$myerrors.editedAt",
-        visibleToUser: "$myerrors.visibleToUser",
-        pageNumber: "$myerrors.pageNumber",
-      },
+  _id: "$myerrors._id",
+  snippetId: {
+    _id: "$snippetData._id",
+    title: "$snippetData.title",
+    content: "$snippetData.content",
+  },
+  userText: "$myerrors.userText",
+  capitalSmall: "$myerrors.capitalSmall",
+  punctuation: "$myerrors.punctuation",
+  missingExtraWord: "$myerrors.missingExtraWord",
+  spelling: "$myerrors.spelling",
+  totalErrorPercentage: "$myerrors.totalErrorPercentage",
+  displayTokens: "$myerrors.displayTokens",
+
+  // ✅ send submitted date/time to frontend
+  submittedAt: "$myerrors.submittedAt",
+
+  // ✅ fallback for old records
+  createdAt: "$myerrors.createdAt",
+
+  editedAt: "$myerrors.editedAt",
+  visibleToUser: "$myerrors.visibleToUser",
+  pageNumber: "$myerrors.pageNumber",
+},
     },
   ];
 
@@ -263,7 +288,7 @@ const getNextSnippet = async (req, res) => {
 
 const submitSnippet = async (req, res) => {
   try {
-    const { userId, snippetId, userText } = req.body;
+    const { userId, snippetId, userText, submittedAt } = req.body;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -294,6 +319,7 @@ const submitSnippet = async (req, res) => {
     user.myerrors.push({
       snippetId,
       userText,
+      submittedAt,
       pageNumber: user.currentIndex + 1,
       ...myerrors,
     });
