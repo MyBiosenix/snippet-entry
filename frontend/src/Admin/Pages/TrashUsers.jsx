@@ -51,16 +51,40 @@ function TrashUsers() {
     });
   };
 
-  const handleRestore = async (id) => {
-    if (!window.confirm("Restore this user?")) return;
+const handleRestore = async (id) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to restore this user?"
+  );
 
-    try {
-      await axios.put(`${API_BASE}/auth/${id}/restore`);
-      fetchTrashUsers();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to restore user");
+  if (!confirmed) return;
+
+  try {
+    const res = await axios.put(`${API_BASE}/auth/${id}/restore`);
+
+    alert(res.data?.message || "User restored successfully");
+
+    await fetchTrashUsers();
+  } catch (err) {
+    const status = err.response?.status;
+    const message = err.response?.data?.message;
+
+    if (status === 409) {
+      alert(
+        message ||
+          "This user's email is already being used by another active user. Change the email before restoring."
+      );
+      return;
     }
-  };
+
+    if (status === 404) {
+      alert(message || "User was not found in Trash.");
+      await fetchTrashUsers();
+      return;
+    }
+
+    alert(message || "Failed to restore user");
+  }
+};
 
   const handlePermanentDelete = async (id) => {
     if (!window.confirm("Permanently delete this user? This cannot be undone.")) return;

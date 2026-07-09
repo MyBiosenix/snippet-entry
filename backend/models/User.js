@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true},
   password: { type: String, required: true },
   mobile: { type: Number, required: true },
   admin: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
@@ -28,6 +28,12 @@ deletedAt: {
   default: null,
   index: true,
 },
+
+trashExpiresAt: {
+  type: Date,
+  default: null
+},
+
 
   myerrors: [
     {
@@ -82,6 +88,16 @@ deletedAt: {
   },
 });
 
+// Email must be unique only between non-deleted users
+UserSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false
+    }
+  }
+);
 UserSchema.index({ isActive: 1, date: 1 });
 UserSchema.index({ admin: 1, isActive: 1 });
 UserSchema.index({ admin: 1, date: 1 });

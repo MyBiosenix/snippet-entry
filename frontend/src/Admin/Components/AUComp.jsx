@@ -29,9 +29,9 @@ function AUComp() {
   const [priceError, setPriceError] = useState("");
 
   // ✅ expiry date + time inputs
-  const [date, setDate] = useState(""); // DD-MM-YYYY
+  const [date, setDate] = useState(""); // YYYY-MM-DD
   const [time, setTime] = useState("23:59"); // HH:mm
-
+  
   const getAdminNames = async () => {
     try {
       const res = await axios.get(`${API_BASE}/admin/adminnames`);
@@ -57,18 +57,40 @@ function AUComp() {
     getPackageNames();
   }, []);
 
-  // ✅ helper: combine MM-DD-YYYY + time -> ISO string for backend
-  // ✅ combine date + time -> ISO string for backend
-  const buildExpiryISO = (dateStr, timeStr) => {
-    if (!dateStr || !timeStr) return "";
 
-    const [yyyy, mm, dd] = dateStr.split("-").map(Number);
-    const [hh, min] = timeStr.split(":").map(Number);
+// Combine date and time and send ISO datetime to backend
+const buildExpiryISO = (dateStr, timeStr) => {
+  if (!dateStr || !timeStr) return "";
 
-    // local datetime -> ISO
-    const expiryAt = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
-    return expiryAt.toISOString();
-  };
+  const [yyyy, mm, dd] = dateStr.split("-").map(Number);
+  const [hh, min] = timeStr.split(":").map(Number);
+
+  if (
+    !yyyy ||
+    !mm ||
+    !dd ||
+    Number.isNaN(hh) ||
+    Number.isNaN(min)
+  ) {
+    return "";
+  }
+
+  const expiryDate = new Date(
+    yyyy,
+    mm - 1,
+    dd,
+    hh,
+    min,
+    0,
+    0
+  );
+
+  if (Number.isNaN(expiryDate.getTime())) {
+    return "";
+  }
+
+  return expiryDate.toISOString();
+};
 
   // ✅ safest way to read price from your package object
   const getPackagePrice = (pkg) => {
@@ -86,34 +108,63 @@ function AUComp() {
 
   // ✅ fill form on edit
   useEffect(() => {
-    if (!userToEdit) return;
+  if (!userToEdit) return;
 
-    setName(userToEdit.name || "");
-    setEmail(userToEdit.email || "");
-    setMobile(userToEdit.mobile || "");
-    setAdmin(userToEdit.admin?._id || "");
-    setPackages(userToEdit.packages?._id || "");
-    setPrice(userToEdit.price || "");
-    setPaymentOptions(userToEdit.paymentoptions || "");
+  setName(userToEdit.name || "");
+  setEmail(userToEdit.email || "");
+  setMobile(userToEdit.mobile || "");
 
-    if (userToEdit.date) {
-      const d = new Date(userToEdit.date);
+  setAdmin(
+    typeof userToEdit.admin === "object"
+      ? userToEdit.admin?._id || ""
+      : userToEdit.admin || ""
+  );
 
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
+  setPackages(
+    typeof userToEdit.packages === "object"
+      ? userToEdit.packages?._id || ""
+      : userToEdit.packages || ""
+  );
 
-      // ✅ show date in MM-DD-YYYY format
-      setDate(`${mm}-${dd}-${yyyy}`);
+  setPrice(
+    userToEdit.price !== null &&
+    userToEdit.price !== undefined
+      ? String(userToEdit.price)
+      : ""
+  );
 
-      const hh = String(d.getHours()).padStart(2, "0");
-      const min = String(d.getMinutes()).padStart(2, "0");
-      setTime(`${hh}:${min}`);
+  setPaymentOptions(userToEdit.paymentoptions || "");
+
+  const previousExpiryDate =
+    userToEdit.date ||
+    userToEdit.expiryDate ||
+    userToEdit.expiryAt;
+
+  if (previousExpiryDate) {
+    const parsedDate = new Date(previousExpiryDate);
+
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const yyyy = parsedDate.getFullYear();
+      const mm = String(parsedDate.getMonth() + 1).padStart(2, "0");
+      const dd = String(parsedDate.getDate()).padStart(2, "0");
+
+      const hours = String(parsedDate.getHours()).padStart(2, "0");
+      const minutes = String(parsedDate.getMinutes()).padStart(2, "0");
+
+      // input type="date" requires YYYY-MM-DD
+      setDate(`${yyyy}-${mm}-${dd}`);
+
+      // input type="time" requires HH:mm
+      setTime(`${hours}:${minutes}`);
     } else {
       setDate("");
       setTime("23:59");
     }
-  }, [userToEdit]);
+  } else {
+    setDate("");
+    setTime("23:59");
+  }
+}, [userToEdit]);
 
   // ✅ AUTO-FILL PRICE when package changes (works for Add + Edit)
   useEffect(() => {
@@ -287,19 +338,19 @@ function AUComp() {
 
           {/* ✅ Expiry Date + Time */}
      
-<div style={{ display: "flex", gap: 10 }}>
-  <input
-    type="date"
-    value={date}
-    onChange={(e) => setDate(e.target.value)}
-  />
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
 
-  <input
-    type="time"
-    value={time}
-    onChange={(e) => setTime(e.target.value)}
-  />
-</div>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
        
         </div>
 

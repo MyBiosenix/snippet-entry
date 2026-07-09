@@ -256,41 +256,78 @@ exports.login = async (req, res) => {
   try {
     const { email, password, forceLogin } = req.body;
 
-    const myuser = await User.findOne({ email }).populate('packages','name');
-    if (!myuser) return res.status(400).json({ message: 'User Does Not Exist' });
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
-    if (password !== myuser.password)
-      return res.status(400).json({ message: 'Incorrect Password' });
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
+    }
 
-    if (!myuser.isActive)
-      return res.status(400).json({ message: 'Your Account has been deactivated. Contact Admin' });
+    // Only find users who are not in Trash
+    const myuser = await User.findOne({
+      email: normalizedEmail,
+      isDeleted: { $ne: true },
+    }).populate("packages", "name");
+
+    if (!myuser) {
+      return res.status(400).json({
+        message: "User Does Not Exist",
+      });
+    }
+
+    if (password !== myuser.password) {
+      return res.status(400).json({
+        message: "Incorrect Password",
+      });
+    }
+
+    if (!myuser.isActive) {
+      return res.status(400).json({
+        message: "Your Account has been deactivated. Contact Admin",
+      });
+    }
 
     if (myuser.lastLoginSession && !forceLogin) {
       return res.status(409).json({
-        message: 'You are already logged in on another device. Click login again to continue.',
-        requiresForceLogin: true
+        message:
+          "You are already logged in on another device. Click login again to continue.",
+        requiresForceLogin: true,
       });
     }
 
     const token = jwt.sign(
       { id: myuser._id },
       env.jwtSecret,
-      { expiresIn: env.userJwtExpiresIn }
+      {
+        expiresIn: env.userJwtExpiresIn,
+      }
     );
 
     myuser.lastLoginSession = token;
     await myuser.save();
 
-    res.status(200).json({
-      message: 'Login Successful',
+    return res.status(200).json({
+      message: "Login Successful",
       token,
       expiresIn: env.userJwtExpiresIn,
-      user: { id: myuser._id, name: myuser.name, email: myuser.email, mobile: myuser.mobile,package: myuser.packages?.name, isActive: myuser.isActive }
+      user: {
+        id: myuser._id,
+        name: myuser.name,
+        email: myuser.email,
+        mobile: myuser.mobile,
+        package: myuser.packages?.name,
+        isActive: myuser.isActive,
+      },
     });
-
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Login error:", err);
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -316,35 +353,7 @@ exports.logout = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, mobile, admin, packages, price, paymentoptions, date } = req.body;
-
-    if (!date) return res.status(400).json({ message: "Expiry date/time is required" });
-
-    const expiryDate = new Date(date);
-    if (isNaN(expiryDate.getTime())) {
-      return res.status(400).json({ message: "Invalid expiry date/time" });
-    }
-
-    const password = getRandomPassword();
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already Exists" });
-    }
-
-    const selectedPackage = await Packages.findById(packages).select("pages");
-    if (!selectedPackage) {
-      return res.status(400).json({ message: "Selected package does not exist" });
-    }
-
-    const allSnippets = await Snippet.find({}, "_id");
-    const snippetLimit = getPackagePageLimit(selectedPackage);
-    const shuffled = allSnippets
-      .map((s) => s._id)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, snippetLimit);
-
-    const newUser = await User.create({
+    const {
       name,
       email,
       mobile,
@@ -352,28 +361,116 @@ exports.createUser = async (req, res) => {
       packages,
       price,
       paymentoptions,
-      date: expiryDate,       // ✅ store as Date object
+      date,
+    } = req.body;
+
+    if (!date) {
+      return res.status(400).json({
+        message: "Expiry date/time is required",
+      });
+    }
+
+    const expiryDate = new Date(date);
+
+    if (Number.isNaN(expiryDate.getTime())) {
+      return res.status(400).json({
+        message: "Invalid expiry date/time",
+      });
+    }
+
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
+
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        message: "Email is required",
+      });
+    }
+
+    /*
+     * Check email only among users who are not in Trash.
+     *
+     * $ne: true also supports older users where the
+     * isDeleted field may not exist.
+     */
+    const existingActiveUser = await User.findOne({
+      email: normalizedEmail,
+      isDeleted: { $ne: true },
+    });
+
+    if (existingActiveUser) {
+      return res.status(400).json({
+        message: "An active user already exists with this email",
+      });
+    }
+
+    const selectedPackage = await Packages.findById(packages).select("pages");
+
+    if (!selectedPackage) {
+      return res.status(400).json({
+        message: "Selected package does not exist",
+      });
+    }
+
+    const allSnippets = await Snippet.find({}, "_id");
+
+    const snippetLimit = getPackagePageLimit(selectedPackage);
+
+    const shuffled = allSnippets
+      .map((snippet) => snippet._id)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, snippetLimit);
+
+    const password = getRandomPassword();
+
+    const newUser = await User.create({
+      name: String(name || "").trim(),
+      email: normalizedEmail,
+      mobile,
+      admin,
+      packages,
+      price,
+      paymentoptions,
+      date: expiryDate,
       password,
       snippetOrder: shuffled,
       currentIndex: 0,
+
+      // New user must always be outside Trash
+      isDeleted: false,
+      deletedAt: null,
+      trashExpiresAt: null,
     });
 
-    res.status(200).json({
+    return res.status(201).json({
       message: "User Created Successfully",
       user: {
-        _id: newUser.id,
+        _id: newUser._id,
         name: newUser.name,
+        email: newUser.email,
         mobile: newUser.mobile,
         admin: newUser.admin,
         packages: newUser.packages,
         price: newUser.price,
         paymentoptions: newUser.paymentoptions,
-        date: newUser.date, // expiry datetime
+        date: newUser.date,
         password: newUser.password,
       },
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Create user error:", err);
+
+    if (err.code === 11000) {
+      return res.status(409).json({
+        message:
+          "Email is blocked by an existing MongoDB unique index. Update the email index to allow reuse of emails from Trash.",
+      });
+    }
+
+    return res.status(500).json({
+      message: err.message || "Server error while creating user",
+    });
   }
 };
 
@@ -851,31 +948,65 @@ exports.restoreUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      {
-        isDeleted: false,
-        deletedAt: null,
-        isActive: true,
-      },
-      { new: true }
-    );
+    // Find only a user that is currently in Trash
+    const user = await User.findOne({
+      _id: id,
+      isDeleted: true,
+    });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found in Trash",
+      });
     }
+
+    const normalizedEmail = String(user.email || "")
+      .trim()
+      .toLowerCase();
+
+    // Check whether another non-deleted user is using this email
+    const existingActiveUser = await User.findOne({
+      _id: { $ne: user._id },
+      email: normalizedEmail,
+      isDeleted: { $ne: true },
+    });
+
+    if (existingActiveUser) {
+      return res.status(409).json({
+        message:
+          "This email is already being used by another active user. This user cannot be restored.",
+      });
+    }
+
+    // Restore user
+    user.email = normalizedEmail;
+    user.isDeleted = false;
+    user.deletedAt = null;
+    user.trashExpiresAt = null;
+    user.isActive = true;
+
+    await user.save();
 
     return res.status(200).json({
       message: "User restored successfully",
       user,
     });
   } catch (err) {
+    console.error("Restore user error:", err);
+
+    // MongoDB partial unique index protection
+    if (err.code === 11000) {
+      return res.status(409).json({
+        message:
+          "This email is already being used by another active user. This user cannot be restored.",
+      });
+    }
+
     return res.status(500).json({
       message: err.message || "Failed to restore user",
     });
   }
 };
-
 exports.permanentDeleteUser = async (req, res) => {
   try {
     const { id } = req.params;
